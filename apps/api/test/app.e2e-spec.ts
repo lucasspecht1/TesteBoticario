@@ -7,10 +7,21 @@ import { env } from '../src/env';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { configureApp } from '../src/setup';
 
-const dbUrl = new URL(env.DATABASE_URL);
-if (!['localhost', '127.0.0.1'].includes(dbUrl.hostname) || !dbUrl.pathname.slice(1).endsWith('_test')) {
-  throw new Error('Os testes e2e apagam dados da loja: rode apenas contra um banco local cujo nome termine em "_test".');
+function assertLocalTestDb(url: string) {
+  const msg = 'Os testes e2e apagam dados da loja: rode apenas contra um banco local cujo nome termine em "_test".';
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    throw new Error(msg);
+  }
+  const local = ['localhost', '127.0.0.1'].includes(u.hostname);
+  // host/hostaddr na query string podem redirecionar a conexão (estilo libpq)
+  if (!local || !u.pathname.slice(1).endsWith('_test') || u.searchParams.has('host') || u.searchParams.has('hostaddr')) {
+    throw new Error(msg);
+  }
 }
+assertLocalTestDb(env.DATABASE_URL);
 
 const OWNER = { email: 'e2e@loja.test', password: 'senha-e2e-123' };
 const storeId = env.DEFAULT_STORE_ID;
