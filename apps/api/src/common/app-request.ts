@@ -1,0 +1,5 @@
+import type { Request } from 'express';
+
+export type AuthUser = { userId: string; storeId: string };
+/** user: preenchido pelo JwtAuthGuard. storeId: preenchido pelo ApiKeyGuard. */
+export type AppRequest = Request & { user?: AuthUser; storeId?: string };
