@@ -38,11 +38,11 @@ Períodos de 7, 30 ou 90 dias (filtro na URL: `/?range=30d`). Definições exata
 - **Visitante único**: aparelho com ao menos uma visita no período.
 - **Recorrente**: visita feita em um dia (local) posterior ao primeiro dia em que o aparelho foi visto. Visitante recorrente = aparelho com ao menos uma visita recorrente.
 - **Permanência**: mediana das visitas **encerradas** (visitas abertas ficam fora).
-- **Opt-in**: % dos visitantes com cadastro que aceitaram comunicações. O painel mostra só taxas, nunca dados pessoais.
+- **Opt-in** (`optInRate`): visitantes que aceitaram receber comunicações ÷ todos os visitantes únicos do período (quem não se cadastrou conta como não aceitou). O painel mostra só taxas, nunca dados pessoais.
 - **Comparação**: o período atual é comparado "até o mesmo ponto" com o anterior (30 dias até agora vs. os 30 dias anteriores até o mesmo horário). Contagens e minutos variam em %, taxas em pontos percentuais.
 - **Fuso**: todas as agregações por dia/hora usam `America/Sao_Paulo`.
 
-Há ainda a página `/simular`, que gera movimento (N visitas nas últimas 2 h) e registra uma conexão manual, passando pela mesma ingestão real.
+Há ainda a página `/simular`, que gera movimento (N visitas nas últimas 2 h) e registra uma conexão manual, passando pela mesma ingestão real, mas autenticado pelo login do dono (`/simulate`, `/simulate/connection`).
 
 ## Arquitetura
 
@@ -70,10 +70,11 @@ Endpoints da API:
 | POST | `/auth/login` | limite de 10/min por e-mail | Login do dono, JWT de 8 h |
 | GET | `/metrics?range=7d\|30d\|90d` | JWT | Métricas do painel |
 | POST | `/simulate` | JWT | Gera N visitas nas últimas 2 h |
+| POST | `/simulate/connection` | JWT | Cadastro manual de uma conexão (painel `/simular`) |
 | GET | `/health` | nenhuma | Saúde da API e do banco |
 | GET | `/docs` | nenhuma | Swagger |
 
-**Por que o Next não fala com o banco.** Toda leitura e escrita passa pela API Nest: um único lugar com regras de negócio, validação e autorização, e o front pode ser trocado sem tocar nos dados. Os segredos ficam só no servidor: o JWT vai em cookie `httpOnly` (`painel_sessao`) e a `INGEST_API_KEY` só existe no servidor do Next; nenhum dos dois chega ao JavaScript do navegador.
+**Por que o Next não fala com o banco.** Toda leitura e escrita passa pela API Nest: um único lugar com regras de negócio, validação e autorização, e o front pode ser trocado sem tocar nos dados. Os segredos ficam só no servidor: o JWT vai em cookie `httpOnly` (`painel_sessao`) e a `INGEST_API_KEY` só existe na API e no portal Wi-Fi (simulado); o Next não a conhece. A escrita pelo painel usa o JWT do dono (`/simulate/connection`). Nada disso chega ao JavaScript do navegador.
 
 ## Modelagem de dados
 
@@ -117,14 +118,13 @@ Decisões:
 Requisitos: Node >= 22.12, pnpm 12 (`packageManager` em `package.json`) e Postgres 16.
 
 ```bash
-# 1. Postgres 16: brew (createdb wifi) ou Docker (usuário postgres, senha postgres, banco wifi)
+# 1. Postgres 16 via Docker (usuário postgres, senha postgres) e o banco dos testes e2e
 docker compose up -d
+docker compose exec db createdb -U postgres wifi_test
 
 # 2. Variáveis de ambiente
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
-# ajuste o usuário em DATABASE_URL de apps/api/.env (o exemplo usa o usuário local "lucas", sem senha;
-# com o docker compose use postgresql://postgres:postgres@localhost:5432/wifi)
 
 # 3. Dependências, contrato compartilhado, migrations e dados de demonstração
 pnpm install
@@ -136,6 +136,8 @@ pnpm --filter @wifi/api seed
 pnpm dev
 ```
 
+Sem Docker (Postgres do brew, por exemplo): `createdb wifi && createdb wifi_test` e ajuste o usuário/senha em `DATABASE_URL` de `apps/api/.env` e `apps/api/.env.test` (os exemplos usam `postgres:postgres`, como o `docker-compose.yml`).
+
 O seed cria a loja `loja-demo`, o usuário `dono@loja.demo` / `demo1234` e 180 dias de movimento determinístico (horário comercial, fim de semana, sazonalidade, ~30% de retorno). Rodar de novo apaga e recria os dados da `loja-demo`.
 
 ## Testes
@@ -143,13 +145,13 @@ O seed cria a loja `loja-demo`, o usuário `dono@loja.demo` / `demo1234` e 180 d
 ```bash
 pnpm lint && pnpm typecheck
 pnpm test        # 31 testes unitários (jest)
-pnpm test:e2e    # 11 testes e2e da API contra um Postgres real
+pnpm test:e2e    # 18 testes e2e da API contra um Postgres real
 pnpm build
 ```
 
 - **Unitários** (sem banco): regra de visita (30 min / 12 h), normalização e HMAC do MAC, métricas e insights, fuso horário, gerador de movimento.
-- **E2E** (`apps/api/test`): `/health`, ingestão (401 sem chave, 400 por campo, evento repetido não duplica), login, `/metrics` com e sem token, período inválido.
-- **Banco do e2e separado.** Os testes e2e apagam dados, então usam um banco próprio, `wifi_test`, configurado em `apps/api/.env.test`. Crie-o com `createdb wifi_test` e **edite o usuário** em `DATABASE_URL` (o arquivo usa o usuário local `lucas`, sem senha). Um guard recusa rodar se o host não for local ou se o nome do banco não terminar em `_test`; assim os dados do seed e bancos remotos ficam protegidos. `pretest:e2e` aplica as migrations nesse banco.
+- **E2E** (`apps/api/test`): `/health`, ingestão (401 sem chave, 400 por campo, evento repetido não duplica), login, `/metrics` com e sem token, período inválido, `/simulate` e `/simulate/connection` (401 sem token, 201 com token).
+- **Banco do e2e separado.** Os testes e2e apagam dados, então usam um banco próprio, `wifi_test`, configurado em `apps/api/.env.test`. Crie-o com `createdb wifi_test` (ou o comando do Docker acima); o arquivo usa `postgres:postgres`, como o `docker-compose.yml`, então ajuste o usuário em `DATABASE_URL` se o seu Postgres for diferente. Um guard recusa rodar se o host não for local ou se o nome do banco não terminar em `_test`; assim os dados do seed e bancos remotos ficam protegidos. `pretest:e2e` aplica as migrations nesse banco.
 - **CI** (`.github/workflows/ci.yml`, GitHub Actions a cada push e PR): Postgres 16 como serviço (`wifi_test`), instala, builda o contrato, roda lint, tipos, testes unitários, e2e e build.
 
 ## Decisões e trade-offs
@@ -175,8 +177,8 @@ Atalhos deliberados, cada um com o limite e o próximo passo. Os seis primeiros 
 Ainda não executado. Passos planejados:
 
 1. **GitHub**: criar o repositório e dar `git push`; o CI roda sozinho.
-2. **Banco (Neon)**: projeto `painel-wifi`, região São Paulo se disponível. Usar a connection string **direta** (sem `-pooler`), com `?sslmode=require`.
-3. **API (Railway)**: deploy do repositório com
+2. **Banco (Neon)**: projeto `painel-wifi`, região **US East (AWS us-east-1)**, a mesma da API no Railway. Banco e API na mesma região importam: cada visita gerada em `/simular` faz várias consultas, e a latência entre regiões estouraria o timeout de 10 s do painel (a API também ingere em lotes de 10 em paralelo). Usar a connection string **direta** (sem `-pooler`), com `?sslmode=require`.
+3. **API (Railway)**: região US East, junto do Neon. Deploy do repositório com
    - Build: `pnpm install --frozen-lockfile && pnpm --filter @wifi/api... build`
    - Start: `pnpm --filter @wifi/api exec prisma migrate deploy && pnpm --filter @wifi/api start:prod`
    - Healthcheck: `/health`
@@ -185,7 +187,7 @@ Ainda não executado. Passos planejados:
    ```bash
    cd apps/api && DATABASE_URL='<neon>' MAC_HASH_SECRET='<prod>' JWT_SECRET='<prod>' INGEST_API_KEY='<prod>' pnpm seed
    ```
-5. **Web (Vercel)**: Root Directory `apps/web`; Build Command `cd ../.. && pnpm --filter @wifi/web... build`; Install Command `cd ../.. && pnpm install --frozen-lockfile`; variáveis `API_URL=https://<api>` (sem barra no fim) e `INGEST_API_KEY=<prod>`.
+5. **Web (Vercel)**: Root Directory `apps/web`; Build Command `cd ../.. && pnpm --filter @wifi/web... build`; Install Command `cd ../.. && pnpm install --frozen-lockfile`; variáveis `API_URL=https://<api>` (sem barra no fim) e `ENABLE_EXPERIMENTAL_COREPACK=1` (para a Vercel usar o pnpm 12 do `packageManager`). O web não precisa da `INGEST_API_KEY`.
 6. Conferir `https://<api>/health` e rodar o roteiro no painel publicado; depois atualizar a seção Links.
 
 ## Próximos passos
