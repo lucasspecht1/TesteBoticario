@@ -5,4 +5,4 @@ export function middleware(req: NextRequest) {
   if (!req.cookies.has(SESSION_COOKIE)) return NextResponse.redirect(new URL('/login', req.url));
 }
 
-export const config = { matcher: ['/((?!login|_next|favicon.ico).*)'] };
+export const config = { matcher: ['/((?!login(?:/|$)|_next/|favicon\\.ico$).*)'] };
