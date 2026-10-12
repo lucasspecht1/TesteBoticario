@@ -3,6 +3,9 @@
 import type { Metrics } from '@wifi/shared';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
+// Atributos SVG não resolvem var(--css); por isso hex literal.
+const COLORS = { novo: '#0f766e', recorrente: '#d97706' };
+
 export function DailyChart({ data }: { data: Metrics['daily'] }) {
   const rows = data.map((d) => ({ ...d, label: `${d.date.slice(8, 10)}/${d.date.slice(5, 7)}` }));
   return (
@@ -14,8 +17,8 @@ export function DailyChart({ data }: { data: Metrics['daily'] }) {
           <YAxis allowDecimals={false} tick={{ fontSize: 12 }} width={36} />
           <Tooltip />
           <Legend />
-          <Bar dataKey="newVisitors" name="Novos" stackId="v" fill="var(--color-novo)" />
-          <Bar dataKey="returningVisitors" name="Recorrentes" stackId="v" fill="var(--color-recorrente)" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="newVisitors" name="Novos" stackId="v" fill={COLORS.novo} />
+          <Bar dataKey="returningVisitors" name="Recorrentes" stackId="v" fill={COLORS.recorrente} radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </figure>

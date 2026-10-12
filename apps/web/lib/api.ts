@@ -17,7 +17,7 @@ export class ApiError extends Error {
   }
 }
 
-type Auth = 'user' | 'ingest' | 'none';
+type Auth = 'user' | 'none';
 
 async function request<T>(path: string, init: RequestInit & { auth: Auth }): Promise<T> {
   if (!API_URL) throw new ApiError(500, 'API_URL não configurada no servidor do painel.');
@@ -28,7 +28,6 @@ async function request<T>(path: string, init: RequestInit & { auth: Auth }): Pro
     if (!token) redirect('/login');
     headers.set('authorization', `Bearer ${token}`);
   }
-  if (init.auth === 'ingest') headers.set('x-api-key', process.env.INGEST_API_KEY ?? '');
 
   let res: Response;
   try {
@@ -49,6 +48,6 @@ export const api = {
   login: (email: string, password: string) =>
     request<{ accessToken: string }>('/auth/login', { ...post({ email, password }), auth: 'none' }),
   metrics: (range: Range) => request<Metrics>(`/metrics?range=${range}`, { auth: 'user' }),
-  ingest: (input: ConnectionInput) => request<IngestResult>('/connections', { ...post(input), auth: 'ingest' }),
+  ingest: (input: ConnectionInput) => request<IngestResult>('/simulate/connection', { ...post(input), auth: 'user' }),
   simulate: (visits: number) => request<{ created: number }>('/simulate', { ...post({ visits }), auth: 'user' }),
 };

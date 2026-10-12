@@ -7,7 +7,7 @@ export function KpiCard({ label, value, delta, deltaUnit, hint }: Props) {
   const arrow = !delta ? '=' : delta > 0 ? '▲' : '▼';
   const text = delta === null ? 'sem base de comparação' : `${arrow} ${fmtDecimal(Math.abs(delta))}${deltaUnit} vs. período anterior`;
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4">
+    <div className="min-w-0 rounded-xl border border-zinc-200 bg-white p-4">
       <p className="text-sm text-zinc-600">{label}</p>
       <p className="mt-1 text-3xl font-semibold tabular-nums">{value}</p>
       <p className={`mt-1 text-xs ${tone}`}>{text}</p>

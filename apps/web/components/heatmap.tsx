@@ -32,10 +32,10 @@ export function Heatmap({ cells }: { cells: Metrics['heatmap'] }) {
                   <td
                     key={h}
                     title={`${day} ${h}h: ${fmtDecimal(v)} visitas em média`}
-                    className={`h-8 min-w-8 rounded text-center tabular-nums ${intensity > 55 ? 'text-white' : 'text-zinc-700'}`}
+                    className={`h-8 min-w-8 rounded text-center tabular-nums ${intensity > 68 ? 'text-white' : 'text-zinc-700'}`}
                     style={{ backgroundColor: `color-mix(in oklab, var(--color-brand) ${intensity}%, #f4f4f5)` }}
                   >
-                    {v ? Math.round(v) : ''}
+                    {Math.round(v) || ''}
                   </td>
                 );
               })}
