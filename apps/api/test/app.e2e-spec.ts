@@ -109,6 +109,15 @@ describe('API (e2e)', () => {
     expect(res.body.details.connectedAt).toBeDefined();
   });
 
+  it('saída no futuro → 400', async () => {
+    const res = await http()
+      .post('/connections')
+      .set(key)
+      .send({ ...event, disconnectedAt: hoursAgo(-2) })
+      .expect(400);
+    expect(res.body.details.disconnectedAt).toBeDefined();
+  });
+
   it('evento repetido não duplica a visita', async () => {
     const a = await http()
       .post('/connections')
@@ -153,5 +162,57 @@ describe('API (e2e)', () => {
       .get('/metrics?range=1y')
       .set('authorization', `Bearer ${login.body.accessToken}`)
       .expect(400);
+  });
+
+  describe('simulação (exige login)', () => {
+    const auth = async () => {
+      const login = await http().post('/auth/login').send(OWNER).expect(200);
+      return { authorization: `Bearer ${login.body.accessToken}` };
+    };
+    const other = { ...event, mac: 'AA:BB:CC:DD:EE:02' };
+
+    it('POST /simulate/connection sem token → 401', () =>
+      http().post('/simulate/connection').send(other).expect(401));
+
+    it('POST /simulate/connection ignora a chave de ingestão', () =>
+      http().post('/simulate/connection').set(key).send(other).expect(401));
+
+    it('POST /simulate/connection com token → 201 e IngestResult', async () => {
+      const headers = await auth();
+      const res = await http()
+        .post('/simulate/connection')
+        .set(headers)
+        .send(other)
+        .expect(201);
+      expect(res.body).toEqual({
+        visitId: expect.any(String) as string,
+        merged: false,
+      });
+    });
+
+    it('POST /simulate/connection valida o corpo → 400', async () => {
+      const headers = await auth();
+      const res = await http()
+        .post('/simulate/connection')
+        .set(headers)
+        .send({ ...other, mac: 'xyz' })
+        .expect(400);
+      expect(res.body.details.mac).toBeDefined();
+    });
+
+    it('POST /simulate sem token → 401', () =>
+      http().post('/simulate').send({ visits: 3 }).expect(401));
+
+    it('POST /simulate com token → { created }', async () => {
+      const before = await prisma.visit.count({ where: { storeId } });
+      const headers = await auth();
+      const res = await http()
+        .post('/simulate')
+        .set(headers)
+        .send({ visits: 3 })
+        .expect(201);
+      expect(res.body).toEqual({ created: 3 });
+      expect(await prisma.visit.count({ where: { storeId } })).toBe(before + 3);
+    });
   });
 });

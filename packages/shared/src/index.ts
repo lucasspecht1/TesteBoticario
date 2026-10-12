@@ -22,6 +22,10 @@ export const connectionInputSchema = z
     message: 'A entrada não pode estar no futuro',
     path: ['connectedAt'],
   })
+  .refine((v) => !v.disconnectedAt || Date.parse(v.disconnectedAt) <= Date.now() + FUTURE_TOLERANCE_MS, {
+    message: 'A saída não pode estar no futuro',
+    path: ['disconnectedAt'],
+  })
   .refine((v) => !v.disconnectedAt || Date.parse(v.disconnectedAt) >= Date.parse(v.connectedAt), {
     message: 'A saída deve ser depois da entrada',
     path: ['disconnectedAt'],

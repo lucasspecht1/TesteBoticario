@@ -24,7 +24,7 @@ export function buildInsights(m: MetricsCore): string[] {
 
   const peak = m.heatmap.reduce((a, b) => (b.avgVisits > a.avgVisits ? b : a));
   out.push(
-    `Pico de movimento: ${WEEKDAYS_PT[peak.weekday]} das ${peak.hour}h às ${peak.hour + 1}h (média de ${num(peak.avgVisits)} visitas). Reforce a equipe nesse horário.`,
+    `Pico de movimento: ${WEEKDAYS_PT[peak.weekday]} das ${peak.hour}h às ${(peak.hour + 1) % 24}h (média de ${num(peak.avgVisits)} visitas). Reforce a equipe nesse horário.`,
   );
 
   const byWeekday = WEEKDAYS_PT.map((_, w) => ({
