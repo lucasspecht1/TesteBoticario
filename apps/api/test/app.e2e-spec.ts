@@ -7,8 +7,9 @@ import { env } from '../src/env';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { configureApp } from '../src/setup';
 
-if (!/localhost|127\.0\.0\.1/.test(env.DATABASE_URL)) {
-  throw new Error('Os testes e2e apagam dados da loja: rode apenas contra um banco local.');
+const dbUrl = new URL(env.DATABASE_URL);
+if (!['localhost', '127.0.0.1'].includes(dbUrl.hostname) || !dbUrl.pathname.slice(1).endsWith('_test')) {
+  throw new Error('Os testes e2e apagam dados da loja: rode apenas contra um banco local cujo nome termine em "_test".');
 }
 
 const OWNER = { email: 'e2e@loja.test', password: 'senha-e2e-123' };
