@@ -9,7 +9,10 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 @Global()
 @Module({
   imports: [
-    JwtModule.register({ secret: env.JWT_SECRET, signOptions: { expiresIn: '8h' } }),
+    JwtModule.register({
+      secret: env.JWT_SECRET,
+      signOptions: { expiresIn: '8h' },
+    }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
   ],
   controllers: [AuthController],

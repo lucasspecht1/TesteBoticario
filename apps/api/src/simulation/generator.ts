@@ -10,10 +10,31 @@ export type GeneratedVisit = {
 // trade-off: UTC-3 fixo (Brasil sem horário de verão desde 2019); usar localParts se houver lojas em outros fusos
 const STORE_OFFSET_MS = -3 * 3_600_000;
 const OPEN_HOUR = 10;
-const HOUR_WEIGHTS = [0.4, 0.6, 0.9, 0.8, 0.7, 0.8, 1.0, 1.2, 1.3, 1.1, 0.8, 0.5]; // 10h..21h
+const HOUR_WEIGHTS = [
+  0.4, 0.6, 0.9, 0.8, 0.7, 0.8, 1.0, 1.2, 1.3, 1.1, 0.8, 0.5,
+]; // 10h..21h
 const WEEKDAY_FACTOR = [0.6, 0.7, 0.8, 0.85, 0.95, 1.2, 1.5]; // dom..sáb
 const RETURNING_SHARE = 0.3;
-const NAMES = ['Ana', 'Bruno', 'Carla', 'Diego', 'Elisa', 'Fernanda', 'Gabriel', 'Helena', 'Igor', 'Juliana', 'Larissa', 'Marcos', 'Natália', 'Otávio', 'Paula', 'Rafael', 'Sofia', 'Tiago'];
+const NAMES = [
+  'Ana',
+  'Bruno',
+  'Carla',
+  'Diego',
+  'Elisa',
+  'Fernanda',
+  'Gabriel',
+  'Helena',
+  'Igor',
+  'Juliana',
+  'Larissa',
+  'Marcos',
+  'Natália',
+  'Otávio',
+  'Paula',
+  'Rafael',
+  'Sofia',
+  'Tiago',
+];
 
 /** PRNG pequeno e determinístico (testes e seed reprodutíveis). */
 export function mulberry32(seed: number) {
@@ -34,7 +55,11 @@ function pickWeighted(rng: Rng, weights: number[]): number {
 }
 
 const randomMac = (rng: Rng) =>
-  Array.from({ length: 6 }, () => Math.floor(rng() * 256).toString(16).padStart(2, '0')).join(':');
+  Array.from({ length: 6 }, () =>
+    Math.floor(rng() * 256)
+      .toString(16)
+      .padStart(2, '0'),
+  ).join(':');
 
 /** Datas comemorativas puxam o movimento (Dia das Mães, Dia dos Pais, Natal). */
 function seasonalBoost(month: number, day: number): number {
@@ -46,17 +71,29 @@ function seasonalBoost(month: number, day: number): number {
 
 function makeLead(rng: Rng): GeneratedVisit['lead'] {
   const name = NAMES[Math.floor(rng() * NAMES.length)];
-  const slug = name.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  const slug = name
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
   return {
     name,
-    email: rng() < 0.8 ? `${slug}${Math.floor(rng() * 1000)}@exemplo.com` : undefined,
+    email:
+      rng() < 0.8
+        ? `${slug}${Math.floor(rng() * 1000)}@exemplo.com`
+        : undefined,
     marketingOptIn: rng() < 0.55,
   };
 }
 
-function makeVisit(rng: Rng, pool: string[], connectedAt: Date): GeneratedVisit {
+function makeVisit(
+  rng: Rng,
+  pool: string[],
+  connectedAt: Date,
+): GeneratedVisit {
   const returning = pool.length > 0 && rng() < RETURNING_SHARE;
-  const mac = returning ? pool[Math.floor(rng() * pool.length)] : randomMac(rng);
+  const mac = returning
+    ? pool[Math.floor(rng() * pool.length)]
+    : randomMac(rng);
   if (!returning) pool.push(mac);
   const dwellMin = rng() < 0.1 ? 30 + rng() * 30 : 2 + rng() ** 2 * 28;
   return {
@@ -69,22 +106,35 @@ function makeVisit(rng: Rng, pool: string[], connectedAt: Date): GeneratedVisit 
 
 /** Clipa no fim: visita que ainda não terminou fica sem saída (cliente na loja). */
 const clip = (v: GeneratedVisit, to: Date): GeneratedVisit =>
-  v.disconnectedAt && v.disconnectedAt > to ? { ...v, disconnectedAt: undefined } : v;
+  v.disconnectedAt && v.disconnectedAt > to
+    ? { ...v, disconnectedAt: undefined }
+    : v;
 
 /** Histórico realista: horário comercial, fim de semana mais cheio, sazonalidade, ~30% de retorno. */
-export function generateVisits(opts: { from: Date; to: Date; avgPerDay: number; seed?: number }): GeneratedVisit[] {
+export function generateVisits(opts: {
+  from: Date;
+  to: Date;
+  avgPerDay: number;
+  seed?: number;
+}): GeneratedVisit[] {
   const rng = mulberry32(opts.seed ?? 42);
   const pool: string[] = [];
   const out: GeneratedVisit[] = [];
-  const firstMidnight = Math.floor((opts.from.getTime() + STORE_OFFSET_MS) / DAY_MS) * DAY_MS - STORE_OFFSET_MS;
+  const firstMidnight =
+    Math.floor((opts.from.getTime() + STORE_OFFSET_MS) / DAY_MS) * DAY_MS -
+    STORE_OFFSET_MS;
 
   for (let day = firstMidnight; day <= opts.to.getTime(); day += DAY_MS) {
     const local = new Date(day + STORE_OFFSET_MS);
-    const factor = WEEKDAY_FACTOR[local.getUTCDay()] * seasonalBoost(local.getUTCMonth() + 1, local.getUTCDate());
+    const factor =
+      WEEKDAY_FACTOR[local.getUTCDay()] *
+      seasonalBoost(local.getUTCMonth() + 1, local.getUTCDate());
     const count = Math.round(opts.avgPerDay * factor * (0.85 + rng() * 0.3));
     for (let i = 0; i < count; i++) {
       const hour = OPEN_HOUR + pickWeighted(rng, HOUR_WEIGHTS);
-      const connectedAt = new Date(day + hour * 3_600_000 + Math.floor(rng() * 3_600_000));
+      const connectedAt = new Date(
+        day + hour * 3_600_000 + Math.floor(rng() * 3_600_000),
+      );
       out.push(makeVisit(rng, pool, connectedAt));
     }
   }
@@ -94,8 +144,19 @@ export function generateVisits(opts: { from: Date; to: Date; avgPerDay: number; 
 }
 
 /** N visitas novas nas últimas 2 h (botão "Gerar movimento" do painel). */
-export function generateRecent(rng: Rng, now: Date, count: number): GeneratedVisit[] {
+export function generateRecent(
+  rng: Rng,
+  now: Date,
+  count: number,
+): GeneratedVisit[] {
   return Array.from({ length: count }, () =>
-    clip(makeVisit(rng, [], new Date(now.getTime() - Math.floor(rng() * 2 * 3_600_000))), now),
+    clip(
+      makeVisit(
+        rng,
+        [],
+        new Date(now.getTime() - Math.floor(rng() * 2 * 3_600_000)),
+      ),
+      now,
+    ),
   );
 }

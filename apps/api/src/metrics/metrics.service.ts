@@ -10,7 +10,9 @@ export class MetricsService {
 
   async get(storeId: string, range: Range, now = new Date()): Promise<Metrics> {
     const days = RANGE_DAYS[range];
-    const store = await this.prisma.store.findUniqueOrThrow({ where: { id: storeId } });
+    const store = await this.prisma.store.findUniqueOrThrow({
+      where: { id: storeId },
+    });
     const { prevFrom } = periodBounds(now, days, store.timezone);
     const visits = await this.prisma.visit.findMany({
       where: { storeId, startedAt: { gte: prevFrom, lte: now } },
@@ -18,7 +20,12 @@ export class MetricsService {
         deviceId: true,
         startedAt: true,
         endedAt: true,
-        device: { select: { firstSeenAt: true, lead: { select: { marketingOptIn: true } } } },
+        device: {
+          select: {
+            firstSeenAt: true,
+            lead: { select: { marketingOptIn: true } },
+          },
+        },
       },
     });
     const rows: VisitRow[] = visits.map((v) => ({

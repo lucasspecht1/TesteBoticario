@@ -24,7 +24,11 @@ function formatter(timeZone: string) {
 
 /** Data/hora no fuso da loja. dateKey = AAAA-MM-DD; weekday 0 = domingo. */
 export function localParts(date: Date, timeZone: string) {
-  const p = Object.fromEntries(formatter(timeZone).formatToParts(date).map((x) => [x.type, x.value]));
+  const p = Object.fromEntries(
+    formatter(timeZone)
+      .formatToParts(date)
+      .map((x) => [x.type, x.value]),
+  );
   return {
     dateKey: `${p.year}-${p.month}-${p.day}`,
     weekday: WEEKDAYS_EN.indexOf(p.weekday),
@@ -39,6 +43,7 @@ export function startOfLocalDay(date: Date, timeZone: string): Date {
   const p = localParts(date, timeZone);
   const [y, m, d] = p.dateKey.split('-').map(Number);
   const wholeSeconds = Math.floor(date.getTime() / 1000) * 1000;
-  const offset = Date.UTC(y, m - 1, d, p.hour, p.minute, p.second) - wholeSeconds;
+  const offset =
+    Date.UTC(y, m - 1, d, p.hour, p.minute, p.second) - wholeSeconds;
   return new Date(Date.UTC(y, m - 1, d) - offset);
 }

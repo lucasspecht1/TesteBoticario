@@ -16,7 +16,10 @@ export class SimulationController {
 
   /** Gera visitas pelo mesmo caminho da ingestão real (mesmas regras de visita e hash). */
   @Post()
-  async simulate(@StoreId() storeId: string, @Body(new ZodValidationPipe(simulateInputSchema)) body: SimulateInput) {
+  async simulate(
+    @StoreId() storeId: string,
+    @Body(new ZodValidationPipe(simulateInputSchema)) body: SimulateInput,
+  ) {
     const now = new Date();
     const visits = generateRecent(mulberry32(now.getTime()), now, body.visits);
     for (const v of visits) {

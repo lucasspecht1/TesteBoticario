@@ -7,19 +7,32 @@ describe('shouldMerge', () => {
     expect(shouldMerge(null, t('14:00'))).toBe(false);
   });
   it('reconexão até 30 min após o fim soma à visita', () => {
-    expect(shouldMerge({ startedAt: t('14:00'), endedAt: t('14:20') }, t('14:50'))).toBe(true);
+    expect(
+      shouldMerge({ startedAt: t('14:00'), endedAt: t('14:20') }, t('14:50')),
+    ).toBe(true);
   });
   it('reconexão depois de 30 min é visita nova', () => {
-    expect(shouldMerge({ startedAt: t('14:00'), endedAt: t('14:20') }, t('14:51'))).toBe(false);
+    expect(
+      shouldMerge({ startedAt: t('14:00'), endedAt: t('14:20') }, t('14:51')),
+    ).toBe(false);
   });
   it('visita aberta absorve reconexão', () => {
-    expect(shouldMerge({ startedAt: t('14:00'), endedAt: null }, t('16:00'))).toBe(true);
+    expect(
+      shouldMerge({ startedAt: t('14:00'), endedAt: null }, t('16:00')),
+    ).toBe(true);
   });
   it('visita aberta há mais de 12 h não absorve', () => {
-    expect(shouldMerge({ startedAt: new Date('2026-10-10T08:00:00-03:00'), endedAt: null }, new Date('2026-10-10T20:01:00-03:00'))).toBe(false);
+    expect(
+      shouldMerge(
+        { startedAt: new Date('2026-10-10T08:00:00-03:00'), endedAt: null },
+        new Date('2026-10-10T20:01:00-03:00'),
+      ),
+    ).toBe(false);
   });
   it('evento repetido (mesma entrada) soma à visita existente', () => {
-    expect(shouldMerge({ startedAt: t('14:00'), endedAt: t('14:20') }, t('14:00'))).toBe(true);
+    expect(
+      shouldMerge({ startedAt: t('14:00'), endedAt: t('14:20') }, t('14:00')),
+    ).toBe(true);
   });
 });
 

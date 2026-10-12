@@ -6,7 +6,9 @@ describe('mac', () => {
   });
 
   it('gera o mesmo hash para formatos diferentes do mesmo MAC', () => {
-    expect(hashMac('AA-BB-CC-DD-EE-FF', 's')).toBe(hashMac('aa:bb:cc:dd:ee:ff', 's'));
+    expect(hashMac('AA-BB-CC-DD-EE-FF', 's')).toBe(
+      hashMac('aa:bb:cc:dd:ee:ff', 's'),
+    );
   });
 
   it('depende do segredo e não contém o MAC', () => {

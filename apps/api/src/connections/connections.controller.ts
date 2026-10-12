@@ -16,8 +16,15 @@ export class ConnectionsController {
 
   /** Simula o portal do Wi-Fi registrando uma conexão (e a saída, quando houver). */
   @Post()
-  @ApiBody({ schema: z.toJSONSchema(connectionInputSchema, { unrepresentable: 'any' }) as object })
-  ingest(@StoreId() storeId: string, @Body(new ZodValidationPipe(connectionInputSchema)) body: ConnectionInput) {
+  @ApiBody({
+    schema: z.toJSONSchema(connectionInputSchema, {
+      unrepresentable: 'any',
+    }) as object,
+  })
+  ingest(
+    @StoreId() storeId: string,
+    @Body(new ZodValidationPipe(connectionInputSchema)) body: ConnectionInput,
+  ) {
     return this.connections.ingest(storeId, body);
   }
 }

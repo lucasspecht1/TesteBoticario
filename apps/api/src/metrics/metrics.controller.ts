@@ -15,7 +15,10 @@ export class MetricsController {
 
   @Get()
   @ApiQuery({ name: 'range', enum: ['7d', '30d', '90d'], required: false })
-  get(@StoreId() storeId: string, @Query(new ZodValidationPipe(metricsQuerySchema)) query: MetricsQuery) {
+  get(
+    @StoreId() storeId: string,
+    @Query(new ZodValidationPipe(metricsQuerySchema)) query: MetricsQuery,
+  ) {
     return this.metrics.get(storeId, query.range);
   }
 }

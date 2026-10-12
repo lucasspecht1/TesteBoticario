@@ -4,11 +4,14 @@ const from = new Date('2026-08-01T03:00:00Z'); // 00:00 local
 const to = new Date('2026-09-26T03:00:00Z'); // 8 semanas
 const visits = generateVisits({ from, to, avgPerDay: 60, seed: 7 });
 const localHour = (d: Date) => (d.getUTCHours() + 21) % 24; // UTC-3
-const localWeekday = (d: Date) => new Date(d.getTime() - 3 * 3_600_000).getUTCDay();
+const localWeekday = (d: Date) =>
+  new Date(d.getTime() - 3 * 3_600_000).getUTCDay();
 
 describe('generateVisits', () => {
   it('é determinístico para a mesma semente', () => {
-    expect(generateVisits({ from, to, avgPerDay: 60, seed: 7 })).toEqual(visits);
+    expect(generateVisits({ from, to, avgPerDay: 60, seed: 7 })).toEqual(
+      visits,
+    );
   });
   it('fica dentro do intervalo e do horário da loja (10h–22h)', () => {
     for (const v of visits) {
@@ -20,10 +23,13 @@ describe('generateVisits', () => {
     }
   });
   it('tem clientes que voltam', () => {
-    expect(new Set(visits.map((v) => v.mac)).size).toBeLessThan(visits.length * 0.8);
+    expect(new Set(visits.map((v) => v.mac)).size).toBeLessThan(
+      visits.length * 0.8,
+    );
   });
   it('sábado tem mais movimento que terça', () => {
-    const count = (w: number) => visits.filter((v) => localWeekday(v.connectedAt) === w).length;
+    const count = (w: number) =>
+      visits.filter((v) => localWeekday(v.connectedAt) === w).length;
     expect(count(6)).toBeGreaterThan(count(2));
   });
 });
@@ -35,7 +41,9 @@ describe('generateRecent', () => {
     expect(out).toHaveLength(25);
     for (const v of out) {
       expect(v.connectedAt <= now).toBe(true);
-      expect(now.getTime() - v.connectedAt.getTime()).toBeLessThanOrEqual(2 * 3_600_000);
+      expect(now.getTime() - v.connectedAt.getTime()).toBeLessThanOrEqual(
+        2 * 3_600_000,
+      );
       if (v.disconnectedAt) expect(v.disconnectedAt <= now).toBe(true);
     }
   });

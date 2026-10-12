@@ -14,9 +14,17 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
     const ok = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH);
-    if (!user || !ok) throw new UnauthorizedException('E-mail ou senha inválidos.');
-    return { accessToken: await this.jwt.signAsync({ sub: user.id, storeId: user.storeId }) };
+    if (!user || !ok)
+      throw new UnauthorizedException('E-mail ou senha inválidos.');
+    return {
+      accessToken: await this.jwt.signAsync({
+        sub: user.id,
+        storeId: user.storeId,
+      }),
+    };
   }
 }

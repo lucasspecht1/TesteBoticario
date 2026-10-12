@@ -1,4 +1,10 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  Logger,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 
@@ -27,14 +33,28 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (typeof body === 'string') message = body;
       else {
         const b = body as { message?: string | string[]; details?: unknown };
-        message = Array.isArray(b.message) ? b.message.join('; ') : (b.message ?? message);
+        message = Array.isArray(b.message)
+          ? b.message.join('; ')
+          : (b.message ?? message);
         details = b.details;
       }
-    } else if (exception instanceof Prisma.PrismaClientKnownRequestError && PRISMA_STATUS[exception.code]) {
+    } else if (
+      exception instanceof Prisma.PrismaClientKnownRequestError &&
+      PRISMA_STATUS[exception.code]
+    ) {
       ({ status, message } = PRISMA_STATUS[exception.code]);
     }
 
-    if (status >= 500) this.logger.error(exception instanceof Error ? exception.stack : exception);
-    res.status(status).json({ statusCode: status, message, details, path: req.url, timestamp: new Date().toISOString() });
+    if (status >= 500)
+      this.logger.error(
+        exception instanceof Error ? exception.stack : exception,
+      );
+    res.status(status).json({
+      statusCode: status,
+      message,
+      details,
+      path: req.url,
+      timestamp: new Date().toISOString(),
+    });
   }
 }

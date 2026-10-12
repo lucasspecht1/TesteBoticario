@@ -7,7 +7,13 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SimulationModule } from './simulation/simulation.module';
 
 @Module({
-  imports: [PrismaModule, ConnectionsModule, AuthModule, MetricsModule, SimulationModule],
+  imports: [
+    PrismaModule,
+    ConnectionsModule,
+    AuthModule,
+    MetricsModule,
+    SimulationModule,
+  ],
   controllers: [HealthController],
 })
 export class AppModule {}

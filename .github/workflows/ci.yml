@@ -1,0 +1,40 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wifi_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # as variáveis do job vencem o .env.test (--env-file não sobrescreve o ambiente)
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/wifi_test
+      JWT_SECRET: ci-secret-with-at-least-32-characters-long
+      INGEST_API_KEY: ci-ingest-key-0123456789abcd
+      MAC_HASH_SECRET: ci-mac-secret-with-at-least-32-characters
+      DEFAULT_STORE_ID: loja-demo
+      API_URL: http://localhost:3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @wifi/shared build
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      # o pretest:e2e já aplica as migrations (prisma migrate deploy)
+      - run: pnpm test:e2e
+      - run: pnpm build
