@@ -20,16 +20,17 @@ function Field({ label, name, error, ...props }: { label: string; name: string; 
 export function ConnectionForm() {
   const [state, action] = useActionState<FormState, FormData>(registerConnection, {});
   const err = state.fieldErrors ?? {};
+  const v = state.values ?? {};
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-2">
-      <Field label="MAC do aparelho" name="mac" placeholder="AA:BB:CC:DD:EE:FF" required error={err.mac} />
+    <form key={JSON.stringify(v)} action={action} className="grid gap-3 sm:grid-cols-2">
+      <Field label="MAC do aparelho" name="mac" defaultValue={v.mac} placeholder="AA:BB:CC:DD:EE:FF" required error={err.mac} />
       <div />
-      <Field label="Entrada" name="connectedAt" type="datetime-local" required error={err.connectedAt} />
-      <Field label="Saída (opcional)" name="disconnectedAt" type="datetime-local" error={err.disconnectedAt} />
-      <Field label="Nome (cadastro opcional)" name="name" error={err.lead} />
-      <Field label="E-mail (opcional)" name="email" type="email" />
+      <Field label="Entrada" name="connectedAt" defaultValue={v.connectedAt} type="datetime-local" required error={err.connectedAt} />
+      <Field label="Saída (opcional)" name="disconnectedAt" defaultValue={v.disconnectedAt} type="datetime-local" error={err.disconnectedAt} />
+      <Field label="Nome (cadastro opcional)" name="name" defaultValue={v.name} error={err.name ?? err['lead.name']} />
+      <Field label="E-mail (opcional)" name="email" type="email" defaultValue={v.email} error={err['lead.email']} />
       <label className="flex items-center gap-2 text-sm sm:col-span-2">
-        <input type="checkbox" name="marketingOptIn" /> Aceita receber comunicações da loja
+        <input type="checkbox" name="marketingOptIn" defaultChecked={!!v.marketingOptIn} /> Aceita receber comunicações da loja
       </label>
       <div className="space-y-2 sm:col-span-2">
         <SubmitButton pendingLabel="Registrando…">Registrar conexão</SubmitButton>
