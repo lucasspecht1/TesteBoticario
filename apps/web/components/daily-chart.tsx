@@ -3,7 +3,7 @@
 import type { Metrics } from '@wifi/shared';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-// Atributos SVG não resolvem var(--css); por isso hex literal.
+// Cores do gráfico num só lugar (mesmos tons do tema).
 const COLORS = { novo: '#0f766e', recorrente: '#d97706' };
 
 export function DailyChart({ data }: { data: Metrics['daily'] }) {
