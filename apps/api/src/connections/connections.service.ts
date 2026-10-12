@@ -17,20 +17,34 @@ export class ConnectionsService {
     const macHash = hashMac(input.mac, env.MAC_HASH_SECRET);
 
     return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.device.findUnique({ where: { storeId_macHash: { storeId, macHash } } });
-      const device = existing
-        ? await tx.device.update({
-            where: { id: existing.id },
-            data: {
-              firstSeenAt: connectedAt < existing.firstSeenAt ? connectedAt : undefined,
-              lastSeenAt: seenAt > existing.lastSeenAt ? seenAt : undefined,
-            },
-          })
-        : await tx.device.create({ data: { storeId, macHash, firstSeenAt: connectedAt, lastSeenAt: seenAt } });
+      const device = await tx.device.upsert({
+        where: { storeId_macHash: { storeId, macHash } },
+        create: { storeId, macHash, firstSeenAt: connectedAt, lastSeenAt: seenAt },
+        update: {},
+      });
+      // first/last seen só se movem para fora do intervalo já conhecido (eventos fora de ordem)
+      if (connectedAt < device.firstSeenAt || seenAt > device.lastSeenAt) {
+        await tx.device.update({
+          where: { id: device.id },
+          data: {
+            firstSeenAt: connectedAt < device.firstSeenAt ? connectedAt : undefined,
+            lastSeenAt: seenAt > device.lastSeenAt ? seenAt : undefined,
+          },
+        });
+      }
 
       if (input.lead) {
-        const lead = { ...input.lead, consentAt: new Date() };
-        await tx.lead.upsert({ where: { deviceId: device.id }, create: { deviceId: device.id, ...lead }, update: lead });
+        const prev = await tx.lead.findUnique({ where: { deviceId: device.id } });
+        const fields = { name: input.lead.name, email: input.lead.email, marketingOptIn: input.lead.marketingOptIn };
+        // consentAt é registro LGPD: só nasce na criação e só muda quando o consentimento muda
+        await tx.lead.upsert({
+          where: { deviceId: device.id },
+          create: { deviceId: device.id, ...fields, consentAt: new Date() },
+          update: {
+            ...fields,
+            consentAt: prev && prev.marketingOptIn !== fields.marketingOptIn ? new Date() : undefined,
+          },
+        });
       }
 
       const last = await tx.visit.findFirst({
