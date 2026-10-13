@@ -1,14 +1,28 @@
-import type { Kpi, MetricsCore } from '@wifi/shared';
-import { DAY_MS, localParts, startOfLocalDay } from '../common/time';
+import type { DwellBucket, Kpi, MetricsCore } from '@wifi/shared';
+import {
+  computeAverageOrZero,
+  computeKpiPercentage,
+  computeRoundedMedian,
+  roundToOneDecimal,
+} from '../common/math';
+import {
+  DAYS_PER_WEEK,
+  HOURS_PER_DAY,
+  computePeriodBounds,
+  getLocalParts,
+  listLocalDaysFrom,
+  type LocalParts,
+} from '../common/time';
+import { computeDwellMinutes, type VisitSpan } from '../common/visit-span';
 
-export type VisitRow = {
+/** Uma visita com os dados do aparelho e do lead necessários para as métricas. */
+export type VisitRow = VisitSpan & {
   deviceId: string;
-  startedAt: Date;
-  endedAt: Date | null;
   deviceFirstSeenAt: Date;
-  optIn: boolean;
+  hasOptedIn: boolean;
 };
 
+/** Faixas de permanência; `max` (minutos) é exclusivo e a última faixa é aberta. */
 const DWELL_BUCKETS = [
   { label: 'Até 5 min', max: 5 },
   { label: '5 a 15 min', max: 15 },
@@ -16,60 +30,92 @@ const DWELL_BUCKETS = [
   { label: '30 min ou mais', max: Infinity },
 ];
 
-const round1 = (n: number) => Math.round(n * 10) / 10;
+/** Resumo de um conjunto de visitas, base dos KPIs. Taxas em %, permanência em minutos. */
+type VisitSummary = {
+  uniqueVisitors: number;
+  visits: number;
+  returningRate: number | null;
+  medianDwellMinutes: number | null;
+  optInRate: number | null;
+  newReturnRate: number | null;
+};
 
-function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const s = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-}
+/** Visitantes novos e de retorno de um dia e o total de visitas dele. */
+type DayVisitorCounts = {
+  newVisitors: number;
+  returningVisitors: number;
+  visits: number;
+};
 
-const dwellMinutes = (r: VisitRow) =>
-  r.endedAt ? (r.endedAt.getTime() - r.startedAt.getTime()) / 60_000 : null;
+/** A visita é de retorno quando o aparelho foi visto pela 1ª vez em um dia local anterior ao dela. */
+const isReturningVisit = (row: VisitRow, timeZone: string): boolean =>
+  getLocalParts(row.deviceFirstSeenAt, timeZone).dateKey <
+  getLocalParts(row.startedAt, timeZone).dateKey;
 
-/** Período atual: dias locais completos até agora. Anterior: mesmo tamanho, até o mesmo ponto. */
-export function periodBounds(now: Date, days: number, timeZone: string) {
-  const curFrom = startOfLocalDay(
-    new Date(now.getTime() - (days - 1) * DAY_MS),
-    timeZone,
-  );
-  return {
-    curFrom,
-    prevFrom: new Date(curFrom.getTime() - days * DAY_MS),
-    prevTo: new Date(now.getTime() - days * DAY_MS),
-  };
-}
+/** Posição da faixa de permanência (`DWELL_BUCKETS`) a que a duração pertence. */
+const findDwellBucketIndex = (minutes: number): number =>
+  DWELL_BUCKETS.findIndex((bucket) => minutes < bucket.max);
 
-function summarize(rows: VisitRow[], tz: string) {
-  const devices = new Set<string>();
-  const returning = new Set<string>();
-  const optIn = new Set<string>();
-  const dwell: number[] = [];
-  for (const r of rows) {
-    devices.add(r.deviceId);
-    if (
-      localParts(r.deviceFirstSeenAt, tz).dateKey <
-      localParts(r.startedAt, tz).dateKey
-    )
-      returning.add(r.deviceId);
-    if (r.optIn) optIn.add(r.deviceId);
-    const m = dwellMinutes(r);
-    if (m !== null) dwell.push(m);
+/** Conta as visitas com saída registrada por faixa de permanência (mesma ordem de `DWELL_BUCKETS`). */
+export function countDwellBuckets(rows: VisitRow[]): DwellBucket[] {
+  const counts = DWELL_BUCKETS.map(() => 0);
+  for (const row of rows) {
+    const minutes = computeDwellMinutes(row);
+    if (minutes !== null) counts[findDwellBucketIndex(minutes)]++;
   }
-  const pct = (n: number) =>
-    devices.size ? round1((n / devices.size) * 100) : null;
-  const med = median(dwell);
+  return DWELL_BUCKETS.map((bucket, index) => ({
+    label: bucket.label,
+    count: counts[index],
+  }));
+}
+
+/**
+ * Resume as visitas de um período. `from` marca o início da janela: cliente novo é quem foi
+ * visto pela 1ª vez dentro dela, e "voltou" é ter outra visita num dia local seguinte.
+ */
+export function summarizeVisits(
+  rows: VisitRow[],
+  timeZone: string,
+  from: Date,
+): VisitSummary {
+  const devices = new Set<string>();
+  const returningDevices = new Set<string>();
+  const newDevices = new Set<string>();
+  const newReturnedDevices = new Set<string>();
+  const optInDevices = new Set<string>();
+  const dwellMinutesList: number[] = [];
+
+  for (const row of rows) {
+    devices.add(row.deviceId);
+    const isReturning = isReturningVisit(row, timeZone);
+    if (isReturning) returningDevices.add(row.deviceId);
+    if (row.deviceFirstSeenAt >= from) {
+      newDevices.add(row.deviceId);
+      if (isReturning) newReturnedDevices.add(row.deviceId);
+    }
+    if (row.hasOptedIn) optInDevices.add(row.deviceId);
+    const minutes = computeDwellMinutes(row);
+    if (minutes !== null) dwellMinutesList.push(minutes);
+  }
+
   return {
     uniqueVisitors: devices.size,
     visits: rows.length,
-    returningRate: pct(returning.size),
-    medianDwellMinutes: med === null ? null : round1(med),
-    optInRate: pct(optIn.size),
+    returningRate: computeKpiPercentage(returningDevices.size, devices.size),
+    medianDwellMinutes: computeRoundedMedian(dwellMinutesList),
+    optInRate: computeKpiPercentage(optInDevices.size, devices.size),
+    newReturnRate: computeKpiPercentage(
+      newReturnedDevices.size,
+      newDevices.size,
+    ),
   };
 }
 
-function kpi(
+/**
+ * KPI com variação contra o período anterior. `relative` = % sobre o anterior (nulo se o
+ * anterior é 0); `points` = diferença em pontos percentuais.
+ */
+export function buildKpi(
   value: number | null,
   previous: number | null,
   kind: 'relative' | 'points',
@@ -77,90 +123,180 @@ function kpi(
   if (value === null || previous === null)
     return { value, previous, delta: null };
   if (kind === 'points')
-    return { value, previous, delta: round1(value - previous) };
+    return { value, previous, delta: roundToOneDecimal(value - previous) };
   return {
     value,
     previous,
     delta:
-      previous === 0 ? null : round1(((value - previous) / previous) * 100),
+      previous === 0
+        ? null
+        : roundToOneDecimal(((value - previous) / previous) * 100),
   };
 }
 
+/** Quantas vezes cada dia da semana (0 = domingo) aparece nos dias do período. */
+function countWeekdayOccurrences(days: LocalParts[]): number[] {
+  const counts = new Array<number>(DAYS_PER_WEEK).fill(0);
+  for (const day of days) counts[day.weekday]++;
+  return counts;
+}
+
+/** Visitas que começaram dentro de [from, to]. */
+export const filterVisitsBetween = (
+  rows: VisitRow[],
+  from: Date,
+  to: Date,
+): VisitRow[] =>
+  rows.filter((row) => row.startedAt >= from && row.startedAt <= to);
+
+/**
+ * Visitantes novos, de retorno e total de visitas por dia local. Só entram os dias de `days`
+ * (na ordem recebida); visitas de outros dias são ignoradas.
+ */
+export function countVisitorsByDate(
+  rows: VisitRow[],
+  days: LocalParts[],
+  timeZone: string,
+): Map<string, DayVisitorCounts> {
+  const devicesByDate = new Map(
+    days.map((day) => [
+      day.dateKey,
+      {
+        newDevices: new Set<string>(),
+        returningDevices: new Set<string>(),
+        visits: 0,
+      },
+    ]),
+  );
+  for (const row of rows) {
+    const day = devicesByDate.get(
+      getLocalParts(row.startedAt, timeZone).dateKey,
+    );
+    if (!day) continue;
+    const devices = isReturningVisit(row, timeZone)
+      ? day.returningDevices
+      : day.newDevices;
+    devices.add(row.deviceId);
+    day.visits++;
+  }
+  return new Map(
+    [...devicesByDate].map(([date, day]) => [
+      date,
+      {
+        newVisitors: day.newDevices.size,
+        returningVisitors: day.returningDevices.size,
+        visits: day.visits,
+      },
+    ]),
+  );
+}
+
+/** Visitas por posição semana x hora (`weekday * HOURS_PER_DAY + hour`) no período. */
+function countVisitsByWeekHour(rows: VisitRow[], timeZone: string): number[] {
+  const slots = new Array<number>(DAYS_PER_WEEK * HOURS_PER_DAY).fill(0);
+  for (const row of rows) {
+    const { weekday, hour } = getLocalParts(row.startedAt, timeZone);
+    slots[weekday * HOURS_PER_DAY + hour]++;
+  }
+  return slots;
+}
+
+/** Média de visitas por hora da semana: visitas na posição divididas pelas ocorrências do dia. */
+function buildHeatmap(
+  slots: number[],
+  weekdayOccurrences: number[],
+): MetricsCore['heatmap'] {
+  return slots.map((count, slotIndex) => {
+    const weekday = Math.floor(slotIndex / HOURS_PER_DAY);
+    return {
+      weekday,
+      hour: slotIndex % HOURS_PER_DAY,
+      avgVisits: computeAverageOrZero(count, weekdayOccurrences[weekday]),
+    };
+  });
+}
+
+/** Média de visitas por dia para cada dia da semana (0 = domingo). */
+function buildWeekdayAverages(
+  slots: number[],
+  weekdayOccurrences: number[],
+): number[] {
+  return weekdayOccurrences.map((occurrences, weekday) => {
+    const weekdayVisits = slots
+      .slice(weekday * HOURS_PER_DAY, (weekday + 1) * HOURS_PER_DAY)
+      .reduce((sum, count) => sum + count, 0);
+    return computeAverageOrZero(weekdayVisits, occurrences);
+  });
+}
+
+/** KPIs do período atual contra o anterior. */
+function buildKpis(
+  current: VisitSummary,
+  previous: VisitSummary,
+): MetricsCore['kpis'] {
+  return {
+    uniqueVisitors: buildKpi(
+      current.uniqueVisitors,
+      previous.uniqueVisitors,
+      'relative',
+    ),
+    visits: buildKpi(current.visits, previous.visits, 'relative'),
+    returningRate: buildKpi(
+      current.returningRate,
+      previous.returningRate,
+      'points',
+    ),
+    medianDwellMinutes: buildKpi(
+      current.medianDwellMinutes,
+      previous.medianDwellMinutes,
+      'relative',
+    ),
+    optInRate: buildKpi(current.optInRate, previous.optInRate, 'points'),
+    newReturnRate: buildKpi(
+      current.newReturnRate,
+      previous.newReturnRate,
+      'points',
+    ),
+  };
+}
+
+/**
+ * Métricas do painel para os últimos `days` dias locais contra os `days` anteriores.
+ * `rows` deve cobrir os dois períodos.
+ */
 // trade-off: agrega em memória (ok até centenas de milhares de visitas por período); depois disso, GROUP BY no Postgres ou tabela diária pré-calculada
 export function computeMetrics(
   rows: VisitRow[],
-  opts: { now: Date; days: number; timeZone: string },
+  options: { now: Date; days: number; timeZone: string },
 ): MetricsCore {
-  const { now, days, timeZone: tz } = opts;
-  const { curFrom, prevFrom, prevTo } = periodBounds(now, days, tz);
-  const current = rows.filter(
-    (r) => r.startedAt >= curFrom && r.startedAt <= now,
+  const { now, days, timeZone } = options;
+  const { currentFrom, previousFrom, previousTo } = computePeriodBounds(
+    now,
+    days,
+    timeZone,
   );
-  const previous = rows.filter(
-    (r) => r.startedAt >= prevFrom && r.startedAt <= prevTo,
-  );
-  const cur = summarize(current, tz);
-  const prev = summarize(previous, tz);
+  const currentRows = filterVisitsBetween(rows, currentFrom, now);
+  const previousRows = filterVisitsBetween(rows, previousFrom, previousTo);
 
-  // dias locais do período (meio-dia evita bordas de fuso)
-  const dayInfo = Array.from({ length: days }, (_, i) =>
-    localParts(new Date(curFrom.getTime() + i * DAY_MS + DAY_MS / 2), tz),
-  );
-
-  const daily = new Map(
-    dayInfo.map((p) => [
-      p.dateKey,
-      { newDevices: new Set<string>(), returningDevices: new Set<string>() },
-    ]),
-  );
-  const slots = new Array<number>(168).fill(0);
-  const buckets = DWELL_BUCKETS.map(() => 0);
-
-  for (const r of current) {
-    const p = localParts(r.startedAt, tz);
-    const isReturning = localParts(r.deviceFirstSeenAt, tz).dateKey < p.dateKey;
-    const day = daily.get(p.dateKey);
-    if (day)
-      (isReturning ? day.returningDevices : day.newDevices).add(r.deviceId);
-    slots[p.weekday * 24 + p.hour]++;
-    const m = dwellMinutes(r);
-    if (m !== null) buckets[DWELL_BUCKETS.findIndex((b) => m < b.max)]++;
-  }
-
-  const weekdayCount = new Array<number>(7).fill(0);
-  for (const p of dayInfo) weekdayCount[p.weekday]++;
+  const periodDays = listLocalDaysFrom(currentFrom, days, timeZone);
+  const weekdayOccurrences = countWeekdayOccurrences(periodDays);
+  const slots = countVisitsByWeekHour(currentRows, timeZone);
 
   return {
-    range: { from: curFrom.toISOString(), to: now.toISOString(), days },
-    kpis: {
-      uniqueVisitors: kpi(cur.uniqueVisitors, prev.uniqueVisitors, 'relative'),
-      visits: kpi(cur.visits, prev.visits, 'relative'),
-      returningRate: kpi(cur.returningRate, prev.returningRate, 'points'),
-      medianDwellMinutes: kpi(
-        cur.medianDwellMinutes,
-        prev.medianDwellMinutes,
-        'relative',
-      ),
-      optInRate: kpi(cur.optInRate, prev.optInRate, 'points'),
-    },
-    daily: [...daily].map(([date, v]) => ({
-      date,
-      newVisitors: v.newDevices.size,
-      returningVisitors: v.returningDevices.size,
-    })),
-    heatmap: slots.map((count, i) => {
-      const weekday = Math.floor(i / 24);
-      return {
-        weekday,
-        hour: i % 24,
-        avgVisits: weekdayCount[weekday]
-          ? round1(count / weekdayCount[weekday])
-          : 0,
-      };
-    }),
-    dwellBuckets: DWELL_BUCKETS.map((b, i) => ({
-      label: b.label,
-      count: buckets[i],
-    })),
+    range: { from: currentFrom.toISOString(), to: now.toISOString(), days },
+    kpis: buildKpis(
+      summarizeVisits(currentRows, timeZone, currentFrom),
+      summarizeVisits(previousRows, timeZone, previousFrom),
+    ),
+    daily: [...countVisitorsByDate(currentRows, periodDays, timeZone)].map(
+      ([date, counts]) => ({
+        date,
+        newVisitors: counts.newVisitors,
+        returningVisitors: counts.returningVisitors,
+      }),
+    ),
+    heatmap: buildHeatmap(slots, weekdayOccurrences),
+    weekdayAvgVisits: buildWeekdayAverages(slots, weekdayOccurrences),
+    dwellBuckets: countDwellBuckets(currentRows),
   };
 }
