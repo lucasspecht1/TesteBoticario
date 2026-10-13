@@ -41,6 +41,7 @@ Ainda não executado. Passos planejados:
    - Variáveis:
      - `API_URL=https://<domínio da API>`, sem barra no fim;
      - `ENABLE_EXPERIMENTAL_COREPACK=1`, para a Vercel usar o pnpm 12 do `packageManager`.
+   - Node.js 24 nas configurações do projeto (o `engines` do `package.json` pede `>=24.9`).
    - O web não precisa da `INGEST_API_KEY`.
 6. **Conferir:**
    1. Abrir `https://<api>/health`.
