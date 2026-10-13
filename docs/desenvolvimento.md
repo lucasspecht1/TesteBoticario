@@ -4,7 +4,7 @@ Como subir o projeto na sua máquina e o que cada suíte de teste cobre. Voltar 
 
 ## Como rodar localmente
 
-Requisitos: Node >= 22.12, pnpm 12 (`packageManager` em `package.json`) e Docker.
+Requisitos: Node >= 24.9, pnpm 12 (`packageManager` em `package.json`) e Docker.
 
 ```bash
 cp apps/api/.env.example apps/api/.env

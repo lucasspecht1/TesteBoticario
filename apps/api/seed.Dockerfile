@@ -1,5 +1,5 @@
 # Imagem do serviço `seed` do docker-compose: aplica as migrations e cria os dados de demonstração.
-FROM node:22-bookworm-slim
+FROM node:24-bookworm-slim
 # o Prisma precisa do openssl; o corepack usa o pnpm fixado no packageManager
 RUN apt-get update && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/* && corepack enable

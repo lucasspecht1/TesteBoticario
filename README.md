@@ -74,7 +74,7 @@ Diagrama, endpoints, modelagem de dados e tratamento de erros: [`docs/arquitetur
 
 ## Como rodar
 
-Requisitos: Node >= 22.12, pnpm 12 e Docker.
+Requisitos: Node >= 24.9, pnpm 12 e Docker.
 
 ```bash
 cp apps/api/.env.example apps/api/.env
