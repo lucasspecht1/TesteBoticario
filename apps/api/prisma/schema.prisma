@@ -1,0 +1,66 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Store {
+  id        String   @id
+  name      String
+  timezone  String   @default("America/Sao_Paulo")
+  createdAt DateTime @default(now())
+  devices   Device[]
+  visits    Visit[]
+  users     User[]
+}
+
+/// Aparelho identificado pelo HMAC do MAC (nunca o MAC em claro).
+model Device {
+  id          String   @id @default(cuid())
+  storeId     String
+  macHash     String
+  firstSeenAt DateTime
+  lastSeenAt  DateTime
+  store       Store    @relation(fields: [storeId], references: [id])
+  visits      Visit[]
+  lead        Lead?
+
+  @@unique([storeId, macHash])
+}
+
+/// Uma ida à loja. Reconexões em até 30 min somam à mesma visita.
+model Visit {
+  id        String    @id @default(cuid())
+  storeId   String
+  deviceId  String
+  startedAt DateTime
+  endedAt   DateTime?
+  store     Store     @relation(fields: [storeId], references: [id])
+  device    Device    @relation(fields: [deviceId], references: [id])
+
+  @@index([storeId, startedAt])
+  @@index([deviceId, startedAt])
+}
+
+/// Cadastro opcional no portal do Wi-Fi, com registro do consentimento (LGPD).
+model Lead {
+  id             String   @id @default(cuid())
+  deviceId       String   @unique
+  name           String
+  email          String?
+  marketingOptIn Boolean
+  consentAt      DateTime
+  device         Device   @relation(fields: [deviceId], references: [id])
+}
+
+model User {
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String
+  storeId      String
+  store        Store  @relation(fields: [storeId], references: [id])
+}

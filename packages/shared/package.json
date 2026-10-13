@@ -1,0 +1,20 @@
+{
+  "name": "@wifi/shared",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "zod": "^4.6.6"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10",
+    "typescript": "~5.9.3"
+  }
+}

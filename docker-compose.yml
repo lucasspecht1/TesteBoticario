@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: wifi
+    ports: ['5432:5432']
+    # os dados ficam em db/ (fora do git) e sobrevivem a `docker compose down`
+    volumes: ['./db:/var/lib/postgresql/data']
+    healthcheck:
+      # -h força TCP: durante o initdb o Postgres sobe só no socket e o pg_isready responderia cedo demais
+      test: ['CMD', 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'wifi']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # migrations + loja demo, login e 180 dias de visitas; com o banco já populado, só aplica migrations
+  seed:
+    build:
+      context: .
+      dockerfile: apps/api/seed.Dockerfile
+    env_file: apps/api/.env.example
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/wifi
+      SEED_IF_EMPTY: '1'
+    depends_on:
+      db:
+        condition: service_healthy

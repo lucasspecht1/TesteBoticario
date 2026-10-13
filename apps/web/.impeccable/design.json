@@ -1,0 +1,361 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-13T12:00:00Z",
+  "title": "Design System: Painel da loja O Boticário",
+  "extensions": {
+    "colorMeta": {
+      "brand": {
+        "role": "primary",
+        "displayName": "Verde Boticário",
+        "canonical": "#4C765F",
+        "tonalRamp": [
+          "#1F3328",
+          "#2B4638",
+          "#3A5C4A",
+          "#4C765F",
+          "#6F9480",
+          "#95B3A3",
+          "#C0D3C8",
+          "#E6EEE9"
+        ]
+      },
+      "primavera": {
+        "role": "tertiary",
+        "displayName": "Verde-primavera",
+        "canonical": "#93DA49",
+        "tonalRamp": [
+          "#2F4A0F",
+          "#47701A",
+          "#609527",
+          "#7BBC38",
+          "#93DA49",
+          "#B0E577",
+          "#CDEEA5",
+          "#E8F7D3"
+        ]
+      },
+      "rose-soft": {
+        "role": "secondary",
+        "displayName": "Cinza malva clareado",
+        "canonical": "#EBE2E3",
+        "tonalRamp": [
+          "#3A2E2C",
+          "#6E5853",
+          "#8F7A76",
+          "#B3A19E",
+          "#D0C4C5",
+          "#EBE2E3",
+          "#F3EEEE",
+          "#FAF8F8"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Papel",
+        "canonical": "#F2F2F2",
+        "tonalRamp": [
+          "#212121",
+          "#4A4A4A",
+          "#666666",
+          "#9A9A9A",
+          "#C9C9C9",
+          "#E3E3E3",
+          "#F2F2F2",
+          "#FFFFFF"
+        ]
+      },
+      "reforco-resto": {
+        "role": "secondary",
+        "displayName": "Verde névoa de dado",
+        "canonical": "#B5CDBF",
+        "tonalRamp": [
+          "#2A3F34",
+          "#3E5C4C",
+          "#587A68",
+          "#7A9A88",
+          "#95B3A3",
+          "#B5CDBF",
+          "#D3E2D9",
+          "#EEF4F0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display (Belleza)",
+        "purpose": "Manchete do período e título do login."
+      },
+      "kpi-number": {
+        "displayName": "Número",
+        "purpose": "Valores da régua e médias das colunas de dia."
+      },
+      "reading": {
+        "displayName": "Leitura",
+        "purpose": "Frases de insight."
+      },
+      "stat-number": {
+        "displayName": "Número do perfil",
+        "purpose": "Régua de 4 números do perfil do cliente (1.875rem)."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 1px 2px rgb(73 81 65 / 0.05), 0 8px 24px -12px rgb(73 81 65 / 0.16)",
+        "purpose": "Cartões, colunas de dia, abas."
+      },
+      {
+        "name": "card-lifted",
+        "value": "0 2px 4px rgb(73 81 65 / 0.06), 0 16px 32px -14px rgb(73 81 65 / 0.28)",
+        "purpose": "Hover das colunas da semana (links), com subida de 2px."
+      },
+      {
+        "name": "tooltip",
+        "value": "0 8px 24px -8px rgb(73 81 65 / .28)",
+        "purpose": "Tooltip do gráfico."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Entrada .rise de 0,7s, escalonada em 60ms, só sem reduced-motion."
+      },
+      {
+        "name": "lift-on-link",
+        "value": "300ms, ease-out-expo, translateY(-2px)",
+        "purpose": "Hover de cartões que são links; active volta ao lugar."
+      },
+      {
+        "name": "count-up",
+        "value": "900ms, ease-out quarta potência",
+        "purpose": "Números sobem ao montar; desligado em reduced-motion."
+      },
+      {
+        "name": "color-transition",
+        "value": "200ms",
+        "purpose": "Abas e nav."
+      },
+      {
+        "name": "live-ping",
+        "value": "animate-ping, só com motion-safe",
+        "purpose": "Ponto de 'Na loja agora'; desligado em reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão primário",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal em pílula verde.",
+      "html": "<button class=\"ds-btn\">Gerar movimento de teste</button>",
+      "css": ".ds-btn{background:#4c765f;color:#fff;border:0;border-radius:9999px;padding:10px 20px;font:600 14px 'DM Sans',Helvetica,sans-serif;transition:background .2s}.ds-btn:hover{background:#3a5c4a}.ds-btn:active{transform:scale(.98)}.ds-btn:focus-visible{outline:2px solid #4c765f;outline-offset:2px}"
+    },
+    {
+      "name": "Abas de período",
+      "kind": "nav",
+      "refersTo": "range-tab",
+      "description": "Filtro 7, 30 ou 90 dias em pílula.",
+      "html": "<nav class=\"ds-tabs\"><a class=\"ds-tab on\">7 dias</a><a class=\"ds-tab\">30 dias</a><a class=\"ds-tab\">90 dias</a></nav>",
+      "css": ".ds-tabs{display:inline-flex;background:#fff;border-radius:9999px;padding:4px;box-shadow:0 1px 2px rgb(73 81 65/.05),0 8px 24px -12px rgb(73 81 65/.16);font:500 14px 'DM Sans',sans-serif}.ds-tab{padding:6px 16px;border-radius:9999px;color:#4a4a4a;transition:background .2s}.ds-tab:hover{background:#f2f2f2;color:#212121}.ds-tab.on{background:#4c765f;color:#fff}"
+    },
+    {
+      "name": "Cartão",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Superfície branca de 12px com sombra tingida.",
+      "html": "<section class=\"ds-card\"><h2>Visitantes por dia</h2><p>Novos e recorrentes</p></section>",
+      "css": ".ds-card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 2px rgb(73 81 65/.05),0 8px 24px -12px rgb(73 81 65/.16);font-family:'DM Sans',sans-serif}.ds-card h2{margin:0;font-size:16px;font-weight:600;color:#212121}.ds-card p{margin:2px 0 0;font-size:14px;color:#666}"
+    },
+    {
+      "name": "Coluna do dia mais cheio",
+      "kind": "custom",
+      "refersTo": "day-column-busiest",
+      "description": "Coluna da semana em verde cheio com barras brancas. É um link: hover sobe 2px com sombra elevada.",
+      "html": "<article class=\"ds-day\"><strong>Sábado</strong><p class=\"n\">142,5</p><small>visitas num dia típico</small><div class=\"bars\"><i style=\"height:30%\"></i><i class=\"pk\" style=\"height:100%\"></i><i style=\"height:55%\"></i></div><small>Pico das 15h às 16h</small></article>",
+      "css": ".ds-day{width:150px;background:#4c765f;color:#fff;border-radius:12px;padding:16px;font:14px 'DM Sans',sans-serif;box-shadow:0 8px 24px -12px rgb(73 81 65/.16)}.ds-day .n{font:36px/1 Belleza,serif;margin:16px 0 4px}.ds-day small{display:block;font-size:12px;opacity:.9}.ds-day .bars{display:flex;align-items:flex-end;gap:2px;height:48px;margin:20px 0 8px}.ds-day .bars i{flex:1;background:rgba(255,255,255,.35);border-radius:2px 2px 0 0}.ds-day .bars i.pk{background:#fff}.ds-day{transition:transform .3s cubic-bezier(.16,1,.3,1),box-shadow .3s}.ds-day:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgb(73 81 65/.06),0 16px 32px -14px rgb(73 81 65/.28)}"
+    },
+    {
+      "name": "Seletor de dia",
+      "kind": "nav",
+      "refersTo": "day-pill",
+      "description": "7 pílulas de dia da semana; ativa em verde.",
+      "html": "<nav class=\"ds-days\"><a>Seg</a><a class=\"on\">Ter</a><a>Qua</a></nav>",
+      "css": ".ds-days{display:flex;gap:6px;font:500 14px 'DM Sans',sans-serif}.ds-days a{padding:6px 14px;border-radius:9999px;background:#fff;color:#4a4a4a;box-shadow:0 1px 2px rgb(73 81 65/.05),0 8px 24px -12px rgb(73 81 65/.16);transition:color .2s}.ds-days a:hover{color:#212121}.ds-days a.on{background:#4c765f;color:#fff}"
+    },
+    {
+      "name": "Painel de escala",
+      "kind": "custom",
+      "refersTo": "panel-staffing",
+      "description": "Cartão sólido verde com janelas de horário em Belleza.",
+      "html": "<section class=\"ds-staff\"><h2>Para a escala de terça</h2><small>Reforço de equipe</small><p>15h às 19h</p></section>",
+      "css": ".ds-staff{background:#4c765f;color:#fff;border-radius:12px;padding:24px;font:14px 'DM Sans',sans-serif}.ds-staff h2{margin:0 0 20px;font-size:16px;font-weight:600}.ds-staff small{color:rgba(255,255,255,.85)}.ds-staff p{margin:4px 0 0;font:30px/1.25 Belleza,serif}"
+    },
+    {
+      "name": "Página não encontrada",
+      "kind": "custom",
+      "description": "Cartão central com ícone, título em Belleza e botão de volta.",
+      "html": "<section class=\"ds-nf\"><span class=\"ic\">?</span><h1>Página não encontrada</h1><p>O endereço não existe ou mudou.</p><a>Voltar para o painel</a></section>",
+      "css": ".ds-nf{background:#fff;border-radius:12px;padding:56px 24px;text-align:center;font:14px 'DM Sans',sans-serif;box-shadow:0 1px 2px rgb(73 81 65/.05),0 8px 24px -12px rgb(73 81 65/.16)}.ds-nf .ic{display:grid;place-items:center;width:48px;height:48px;margin:0 auto;border-radius:9999px;background:#e6eee9;color:#4c765f}.ds-nf h1{font:30px Belleza,serif;margin:16px 0 0;color:#212121}.ds-nf p{color:#666;margin:8px 0 24px}.ds-nf a{display:inline-flex;background:#4c765f;color:#fff;border-radius:9999px;padding:10px 20px;font-weight:600}.ds-nf a:hover{background:#3a5c4a}"
+    },
+    {
+      "name": "Coluna do dia mais fraco",
+      "kind": "custom",
+      "refersTo": "day-column-weakest",
+      "description": "Mesma coluna em Cinza malva clareado com pico em malva.",
+      "html": "<article class=\"ds-weak\"><strong>Terça</strong><p class=\"n\">38,0</p><small>visitas num dia típico</small><div class=\"bars\"><i style=\"height:40%\"></i><i class=\"pk\" style=\"height:100%\"></i></div><b>Dia mais fraco</b></article>",
+      "css": ".ds-weak{width:150px;background:#ebe2e3;color:#212121;border-radius:12px;padding:16px;font:14px 'DM Sans',sans-serif}.ds-weak .n{font:36px/1 Belleza,serif;margin:16px 0 4px}.ds-weak small{display:block;font-size:12px;color:#6e5853}.ds-weak .bars{display:flex;align-items:flex-end;gap:2px;height:48px;margin:20px 0 8px}.ds-weak .bars i{flex:1;background:#d0c4c5;border-radius:2px 2px 0 0}.ds-weak .bars i.pk{background:#6e5853}.ds-weak b{font-size:12px;color:#6e5853}"
+    },
+    {
+      "name": "Selo de variação",
+      "kind": "chip",
+      "refersTo": "delta-up",
+      "description": "Variação vs. período anterior, canto de 4px.",
+      "html": "<span class=\"ds-delta\">+12,4%</span>",
+      "css": ".ds-delta{display:inline-flex;background:#e6eee9;color:#3a5c4a;border-radius:4px;padding:2px 6px;font:500 12px 'DM Sans',sans-serif;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Campo",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Campo de 12px com anel verde-névoa no foco.",
+      "html": "<label class=\"ds-field\"><span>E-mail</span><input placeholder=\"dono@loja.demo\"></label>",
+      "css": ".ds-field{display:block;font:14px 'DM Sans',sans-serif}.ds-field span{display:block;margin-bottom:6px;font-weight:500;color:#212121}.ds-field input{width:100%;box-sizing:border-box;background:#fff;border:1px solid #e3e3e3;border-radius:12px;padding:10px 14px;color:#212121;outline:none;transition:border-color .2s}.ds-field input:focus{border-color:#4c765f;box-shadow:0 0 0 3px #e6eee9}"
+    },
+    {
+      "name": "Pílulas de filtro",
+      "kind": "nav",
+      "refersTo": "filter-pill",
+      "description": "Grupo de filtro em links na URL; ativa em verde.",
+      "html": "<div class=\"ds-fp\" role=\"group\" aria-label=\"Situação\"><a>Todas</a><a class=\"on\">Na loja</a><a>Encerradas</a></div>",
+      "css": ".ds-fp{display:inline-flex;background:#fff;border-radius:9999px;padding:4px;font:500 14px 'DM Sans',sans-serif;box-shadow:0 1px 2px rgb(73 81 65/.05),0 8px 24px -12px rgb(73 81 65/.16)}.ds-fp a{padding:6px 14px;border-radius:9999px;color:#4a4a4a;transition:background .2s}.ds-fp a:hover{background:#f2f2f2;color:#212121}.ds-fp a.on{background:#4c765f;color:#fff}.ds-fp a:focus-visible{outline:2px solid #4c765f;outline-offset:2px}"
+    },
+    {
+      "name": "Busca em pílula",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Busca por apelido com lupa e erro inline.",
+      "html": "<label class=\"ds-sf\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 256 256\" fill=\"currentColor\"><path d=\"M229.7 218.3l-50.1-50.1a88 88 0 1 0-11.4 11.4l50.1 50.1a8 8 0 0 0 11.4-11.4zM40 112a72 72 0 1 1 72 72 72.1 72.1 0 0 1-72-72z\"/></svg><input placeholder=\"Apelido do cliente, ex.: 7B3D…\"></label>",
+      "css": ".ds-sf{position:relative;display:block;width:256px;font:14px 'DM Sans',sans-serif}.ds-sf svg{position:absolute;top:50%;left:14px;transform:translateY(-50%);color:#666}.ds-sf input{width:100%;box-sizing:border-box;background:#fff;border:1px solid #e3e3e3;border-radius:9999px;padding:8px 16px 8px 36px;color:#212121;outline:none;transition:border-color .2s}.ds-sf input:focus{border-color:#4c765f;box-shadow:0 0 0 3px #e6eee9}"
+    },
+    {
+      "name": "Faixa ao vivo",
+      "kind": "custom",
+      "refersTo": "chip-live",
+      "description": "Cartão de 3 números em Belleza; ponto primavera pulsa em Na loja agora.",
+      "html": "<dl class=\"ds-live\"><div><dt><i class=\"dot\"></i>Na loja agora</dt><dd>12</dd></div><div><dt>Visitas hoje</dt><dd>148</dd></div><div><dt>Permanência típica hoje</dt><dd>18 min</dd></div></dl>",
+      "css": ".ds-live{display:grid;grid-template-columns:repeat(3,1fr);margin:0;background:#fff;border-radius:12px;overflow:hidden;font:14px 'DM Sans',sans-serif;box-shadow:0 1px 2px rgb(73 81 65/.05),0 8px 24px -12px rgb(73 81 65/.16)}.ds-live div{padding:20px;border-left:1px solid #e3e3e3}.ds-live div:first-child{border-left:0}.ds-live dt{display:flex;align-items:center;gap:8px;color:#666}.ds-live dd{margin:8px 0 0;font:2.4rem/1 Belleza,serif;color:#212121;font-variant-numeric:tabular-nums}.ds-live .dot{width:10px;height:10px;border-radius:9999px;background:#93da49}@media (prefers-reduced-motion:no-preference){.ds-live .dot{animation:ds-ping 1.5s infinite}}@keyframes ds-ping{50%{box-shadow:0 0 0 6px rgba(147,218,73,.3)}}"
+    },
+    {
+      "name": "Selos de visita e segmento",
+      "kind": "chip",
+      "refersTo": "chip-recorrente",
+      "description": "Novo, Recorrente, Fiel, Sumido e Na loja há X; 4px.",
+      "html": "<span class=\"ds-ch n\">Novo</span> <span class=\"ds-ch r\">Recorrente</span> <span class=\"ds-ch f\">Fiel</span> <span class=\"ds-ch s\">Sumido</span> <span class=\"ds-ch l\">Na loja há 12 min</span>",
+      "css": ".ds-ch{display:inline-flex;border-radius:4px;padding:2px 6px;font:600 12px 'DM Sans',sans-serif}.ds-ch.n{background:#f2f2f2;color:#4a4a4a}.ds-ch.r{background:#e6eee9;color:#3a5c4a}.ds-ch.f{background:#4c765f;color:#fff}.ds-ch.s{background:#ebe2e3;color:#6e5853}.ds-ch.l{background:rgba(147,218,73,.7);color:#495141}"
+    },
+    {
+      "name": "Paginação numerada",
+      "kind": "nav",
+      "refersTo": "page-number-active",
+      "description": "Janela de 5 números em círculos de 36px com carets.",
+      "html": "<nav class=\"ds-pg\"><a>1</a><a class=\"on\">2</a><a>3</a><a>4</a><a>5</a></nav>",
+      "css": ".ds-pg{display:flex;gap:4px;font:500 14px 'DM Sans',sans-serif;font-variant-numeric:tabular-nums}.ds-pg a{display:grid;place-items:center;min-width:36px;height:36px;border-radius:9999px;color:#4a4a4a;transition:background .2s}.ds-pg a:hover{background:#fff}.ds-pg a.on{background:#4c765f;color:#fff}"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Relatório da Semana",
+    "overview": "O painel abre dizendo como foi o período numa frase, com o número de visitantes em verde dentro dela, e logo em seguida mostra o que fazer na semana: sete colunas, de segunda a domingo, cada uma com média, barras por hora e pico. Cada coluna é um link: tocar num dia abre a análise daquele dia da semana (horas, escala, comparação com os outros dias). Não há grade de cartões de KPI no topo; os indicadores vêm depois, numa régua única. A resposta vem antes do gráfico. Ao lado, a página Visitas lista cada ida à loja (entrada, saída, duração) e o perfil de cada cliente, sempre por apelido: privacidade é regra de design, não detalhe de dados.",
+    "keyCharacteristics": [
+      "Colunas da semana são links para a análise do dia (/semana/[dia]), que responde em verde cheio \"para a escala de <dia>\".",
+      "Manchete em frase com o número em verde; filtro de período em pílula à direita.",
+      "Semana em 7 colunas: mais cheio em verde cheio, mais fraco em rosado (Cinza malva), hoje contornado em Verde-primavera.",
+      "Verde #4C765F é a única cor de ação.",
+      "Cartões brancos de 12px, sombra tingida de verde, sem bordas.",
+      "Visitas: faixa ao vivo (Na loja agora), filtros em grupos de pílulas na URL, tabela no desktop e cartões no celular, perfil do cliente por apelido.",
+      "Entrada única em sequência (.rise) e contagem animada, respeitando prefers-reduced-motion."
+    ],
+    "rules": [
+      {
+        "name": "The One Action Green Rule",
+        "body": "Só #4C765F (e seu hover) indica ação ou destaque de dado. Jade do guia fica fora da interface.",
+        "section": "colors"
+      },
+      {
+        "name": "The Verde-primavera Reserve Rule",
+        "body": "Verde-primavera marca \"hoje\" e \"agora\", e nada mais no painel: coluna da semana, selo \"Hoje, até agora\", ponto ao vivo e selo \"Na loja há X\". Nunca para ação, filtro ou dado histórico.",
+        "section": "colors"
+      },
+      {
+        "name": "The Segment Tone Rule",
+        "body": "O segmento do cliente tem tom fixo: Novo em paper, Recorrente em brand-soft, Fiel em brand cheio (único selo sólido), Sumido em rose-soft/mauve, nunca vermelho. Cada selo vem com sua regra em texto ao lado.",
+        "section": "colors"
+      },
+      {
+        "name": "The Weakest Is Mauve Rule",
+        "body": "O dia mais fraco é rosado, nunca vermelho: é informação de escala, não erro.",
+        "section": "colors"
+      },
+      {
+        "name": "The Belleza For Numbers Rule",
+        "body": "Belleza só em manchete e em números grandes; títulos de seção e interface em DM Sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Todo número comparável usa tabular-nums.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lift On Link Rule",
+        "body": "Cartão que é link sobe 2px (-translate-y-0.5) e troca para a sombra elevada em 300ms, ease-out-expo; no active volta ao lugar. Cartão que não é link não se move.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Tinted Shadow Rule",
+        "body": "Toda sombra usa o RGB do Veludo verde (73 81 65). Nunca sombra preta nem deslocada dura.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do abrir cada tela com a resposta em frase, antes do gráfico.",
+      "Do dizer contra o que cada número é comparado.",
+      "Do usar 12px nos cartões e campos, pílula em botões e abas, 4px nos selos.",
+      "Do tingir sombras com Veludo verde (73 81 65).",
+      "Do manter a informação em texto quando houver barras decorativas.",
+      "Do declarar a base de cálculo sob gráficos de proporção.",
+      "Do usar tabular-nums em números comparáveis.",
+      "Do dar à tela de detalhe a resposta prática primeiro (\"Para a escala de <dia>\") e manter Painel ativo na nav em /semana/*.",
+      "Do identificar cliente por apelido estável (6 primeiros hex do HMAC do MAC); o primeiro nome só aparece com consentimento de marketing, e o e-mail nunca.",
+      "Do pôr filtros em links na URL, em grupos de pílula com rótulo, e envolver dados em Suspense com key dos parâmetros.",
+      "Do explicar cada segmento de cliente com sua regra em texto."
+    ],
+    "donts": [
+      "Don't voltar ao grid de cartões de KPI no topo.",
+      "Don't usar vermelho para o dia mais fraco.",
+      "Don't usar Jade nem outro verde como cor de ação.",
+      "Don't criar tema escuro.",
+      "Don't redesenhar a ânfora.",
+      "Don't reintroduzir o fundo 3D (ShaderGradient).",
+      "Don't mover cartões que não são links; o hover de subida é sinal de que o cartão leva a algum lugar.",
+      "Don't levar as cores do símbolo \"B\" do favicon para a interface.",
+      "Don't mostrar e-mail, MAC ou nome sem consentimento; o cliente aparece por apelido. Fora de Visitas, só taxas.",
+      "Don't usar primavera para filtro, ação ou histórico; é só \"hoje\" e \"agora\"."
+    ]
+  }
+}
