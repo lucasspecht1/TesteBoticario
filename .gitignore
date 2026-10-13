@@ -6,3 +6,5 @@ dist
 *.tsbuildinfo
 coverage
 .DS_Store
+# dados do Postgres do docker-compose
+/db

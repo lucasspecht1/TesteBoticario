@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"prisma/*.ts\"",
     "start": "nest start",
     "dev": "nest start --watch",
     "start:dev": "nest start --watch",
@@ -24,7 +24,8 @@
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"prisma/*.ts\""
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

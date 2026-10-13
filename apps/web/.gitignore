@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prints de revisão do impeccable (gerados)
+.impeccable/review/
+.impeccable/questions/
+.impeccable/hook.cache.json
