@@ -12,13 +12,13 @@ Passo a passo para publicar o banco e a API no Railway e o web na Vercel. Voltar
 
 ## Passos
 
-Ainda não executado. Passos planejados:
+Publicado no painel em https://teste-boticario-woad.vercel.app e na API em https://testeboticario-production.up.railway.app, seguindo estes passos:
 
 1. **GitHub:** criar o repositório e dar `git push`. O CI roda sozinho.
-2. **Projeto no Railway:** criar o projeto na região **US East**, a mesma das funções da Vercel, e adicionar um serviço **PostgreSQL**. O Railway gera as variáveis de conexão do banco: `DATABASE_URL` para a rede interna e `DATABASE_PUBLIC_URL` para acessar de fora.
+2. **Projeto no Railway:** criar o projeto na região **US East**, a mesma das funções da Vercel, e adicionar um serviço **PostgreSQL**. A API usa a `DATABASE_URL` da rede interna; o acesso público ao banco (TCP Proxy) pode ficar desligado.
 3. **API no Railway:** um serviço ligado ao repositório, com a raiz do monorepo como diretório.
    - Build: `pnpm install --frozen-lockfile && pnpm --filter @wifi/api... build`
-   - Start: `pnpm --filter @wifi/api exec prisma migrate deploy && pnpm --filter @wifi/api start:prod`
+   - Start: `pnpm --filter @wifi/api exec prisma migrate deploy && SEED_IF_EMPTY=1 pnpm --filter @wifi/api seed && pnpm --filter @wifi/api start:prod`
    - Healthcheck: `/health`
    - Variáveis:
      - `DATABASE_URL=${{Postgres.DATABASE_URL}}` (referência ao banco do mesmo projeto);
@@ -29,11 +29,8 @@ Ainda não executado. Passos planejados:
    - **Uma instância só e sem o modo Serverless:**
      - com duas instâncias, cada uma geraria as visitas da demo e elas sairiam duplicadas;
      - com o serviço dormindo, o preenchimento automático para.
-4. **Seed de produção**, uma vez, da máquina local, pela URL pública do banco e com os mesmos segredos da API:
-   ```bash
-   cd apps/api && DATABASE_URL='<DATABASE_PUBLIC_URL>' MAC_HASH_SECRET='<prod>' JWT_SECRET='<prod>' INGEST_API_KEY='<prod>' pnpm seed
-   ```
-   Rodar só uma vez: o seed apaga e recria o histórico da loja demo. Daí em diante, o preenchimento automático mantém os dados em dia.
+4. **Dados de demonstração:** o próprio Start Command roda o seed dentro do Railway, ao lado do banco. Com `SEED_IF_EMPTY=1`, ele só cria a loja, o login e os 180 dias quando o banco ainda não tem visitas; nas partidas seguintes, imprime "Seed pulado" e não apaga nada. Daí em diante, o preenchimento automático mantém os dados em dia.
+   - Rodar o seed da máquina local pela URL pública do banco não funcionou: gravar milhares de aparelhos pelo proxy do Railway estourou o tempo limite. Dentro do Railway leva segundos, e o banco não precisa ficar exposto.
 5. **Web na Vercel:**
    - Root Directory: `apps/web`
    - Install Command: `cd ../.. && pnpm install --frozen-lockfile`
