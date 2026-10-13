@@ -1,63 +1,59 @@
-import { rangeSchema, type Range } from '@wifi/shared';
-import { Card } from '@/components/card';
-import { DailyChart } from '@/components/daily-chart';
-import { DwellBars } from '@/components/dwell-bars';
-import { EmptyState } from '@/components/empty-state';
-import { Heatmap } from '@/components/heatmap';
-import { Insights } from '@/components/insights';
-import { KpiCard } from '@/components/kpi-card';
-import { RangeTabs } from '@/components/range-tabs';
+import type { Range } from '@wifi/shared';
+import { Suspense } from 'react';
+import { DailyAndDwell } from '@/components/dashboard/daily-and-dwell';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { InsightReading } from '@/components/dashboard/insight-reading';
+import { KpiRuler } from '@/components/dashboard/kpi-ruler';
+import { PeriodHeadline } from '@/components/dashboard/period-headline';
+import { WeekOverview } from '@/components/dashboard/week-overview';
+import { AutoRefresh } from '@/components/ui/auto-refresh';
+import { DashboardSkeleton } from '@/components/ui/skeletons';
+import { RecentVisits } from '@/components/visits/recent-visits';
 import { api } from '@/lib/api';
-import { fmtInt, fmtMin, fmtPct } from '@/lib/format';
+import { parseRange } from '@/lib/ranges';
+import { DEFAULT_VISIT_FILTERS, RECENT_VISITS_RANGE } from '@/lib/visit-filters';
 
-const RANGE_LABEL: Record<Range, string> = { '7d': '7 dias', '30d': '30 dias', '90d': '90 dias' };
+// Posição de cada bloco na sequência de entrada (`.rise`); as colunas da semana ocupam da 2 à 8.
+const INSIGHTS_RISE_INDEX = 9;
+const KPIS_RISE_INDEX = 10;
+const CHARTS_RISE_INDEX = 11;
+const RECENT_VISITS_RISE_INDEX = 13;
 
-export default async function PainelPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
-  const range = rangeSchema.catch('30d').parse((await searchParams).range);
-  const m = await api.metrics(range);
-  const { kpis } = m;
-
+// Suspense com chave pelo filtro (e não loading.tsx): no Next 15.5 em produção, trocar só o
+// ?range= sob um loading.tsx buscava os dados mas não trocava a tela.
+/** Painel inicial: manchete do período, semana típica, indicadores, gráficos e últimas visitas. */
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}): Promise<React.JSX.Element> {
+  const range = parseRange((await searchParams).range);
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Visitantes da loja</h1>
-          <p className="text-sm text-zinc-600">
-            Últimos {RANGE_LABEL[range]}, comparados ao período anterior até o mesmo horário.
-          </p>
-        </div>
-        <RangeTabs current={range} />
-      </div>
+    <>
+      <AutoRefresh />
+      <Suspense key={range} fallback={<DashboardSkeleton />}>
+        <DashboardContent range={range} />
+      </Suspense>
+    </>
+  );
+}
 
-      {kpis.visits.value === 0 ? (
-        <EmptyState />
-      ) : (
-        <>
-          <section aria-labelledby="kpis" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <h2 id="kpis" className="sr-only">Indicadores</h2>
-            <KpiCard label="Visitantes únicos" value={fmtInt(kpis.uniqueVisitors.value)} delta={kpis.uniqueVisitors.delta} deltaUnit="%" hint="Aparelhos diferentes que se conectaram." />
-            <KpiCard label="Visitas" value={fmtInt(kpis.visits.value)} delta={kpis.visits.delta} deltaUnit="%" hint="Idas à loja (reconexões em até 30 min contam como uma)." />
-            <KpiCard label="Clientes que voltaram" value={fmtPct(kpis.returningRate.value)} delta={kpis.returningRate.delta} deltaUnit=" p.p." hint="Já tinham vindo à loja em outro dia." />
-            <KpiCard label="Permanência típica" value={fmtMin(kpis.medianDwellMinutes.value)} delta={kpis.medianDwellMinutes.delta} deltaUnit="%" hint="Mediana do tempo conectado." />
-            <KpiCard label="Aceitaram comunicações" value={fmtPct(kpis.optInRate.value)} delta={kpis.optInRate.delta} deltaUnit=" p.p." hint="Cadastro no Wi-Fi com consentimento (LGPD)." />
-          </section>
-
-          <Insights items={m.insights} />
-
-          <Card title="Visitantes por dia" subtitle="Novos e recorrentes">
-            <DailyChart data={m.daily} />
-          </Card>
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="lg:col-span-2" title="Quando a loja enche" subtitle="Média de visitas por dia da semana e hora">
-              <Heatmap cells={m.heatmap} />
-            </Card>
-            <Card title="Quanto tempo ficam" subtitle="Visitas encerradas, por faixa">
-              <DwellBars buckets={m.dwellBuckets} />
-            </Card>
-          </div>
-        </>
-      )}
+/** Busca as métricas do período e as visitas recentes e monta o painel; sem visita, mostra o estado vazio. */
+async function DashboardContent({ range }: { range: Range }) {
+  const [metrics, recentVisits] = await Promise.all([
+    api.metrics(range),
+    api.visits({ ...DEFAULT_VISIT_FILTERS, range: RECENT_VISITS_RANGE, page: 1 }),
+  ]);
+  if (metrics.kpis.visits.value === 0) return <EmptyState />;
+  return (
+    <div className="space-y-10">
+      {/* A manchete diz como foi o período; as colunas dizem o que fazer na semana. */}
+      <PeriodHeadline metrics={metrics} range={range} />
+      <WeekOverview metrics={metrics} range={range} />
+      <InsightReading insights={metrics.insights} riseIndex={INSIGHTS_RISE_INDEX} />
+      <KpiRuler metrics={metrics} riseIndex={KPIS_RISE_INDEX} />
+      <DailyAndDwell metrics={metrics} riseIndex={CHARTS_RISE_INDEX} />
+      <RecentVisits list={recentVisits} riseIndex={RECENT_VISITS_RISE_INDEX} />
     </div>
   );
 }
