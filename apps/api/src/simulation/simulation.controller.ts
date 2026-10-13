@@ -4,16 +4,20 @@ import {
   connectionInputSchema,
   simulateInputSchema,
   type ConnectionInput,
+  type IngestResult,
+  type SimulateResult,
   type SimulateInput,
 } from '@wifi/shared';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StoreId } from '../common/store-id.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { ConnectionsService } from '../connections/connections.service';
-import { generateRecent, mulberry32 } from './generator';
+import { createSeededRng, generateRecent } from './generator';
 
-const BATCH = 10;
+/** Visitas ingeridas em paralelo por lote. */
+const INGEST_BATCH_SIZE = 10;
 
+/** Rotas de demonstração do painel (simular movimento e cadastrar conexão). */
 @ApiTags('simulação')
 @ApiBearerAuth()
 @Controller('simulate')
@@ -26,19 +30,23 @@ export class SimulationController {
   async simulate(
     @StoreId() storeId: string,
     @Body(new ZodValidationPipe(simulateInputSchema)) body: SimulateInput,
-  ) {
+  ): Promise<SimulateResult> {
     const now = new Date();
-    const visits = generateRecent(mulberry32(now.getTime()), now, body.visits);
-    // Lotes de 10 em paralelo: em série, 200 visitas estouram o timeout do painel
+    const visits = generateRecent(
+      createSeededRng(now.getTime()),
+      now,
+      body.visits,
+    );
+    // Lotes de `INGEST_BATCH_SIZE` em paralelo: em série, 200 visitas estouram o timeout do painel
     // (Neon + Railway). Os aparelhos gerados são todos novos, então não colidem.
-    for (let i = 0; i < visits.length; i += BATCH) {
+    for (let i = 0; i < visits.length; i += INGEST_BATCH_SIZE) {
       await Promise.all(
-        visits.slice(i, i + BATCH).map((v) =>
+        visits.slice(i, i + INGEST_BATCH_SIZE).map((visit) =>
           this.connections.ingest(storeId, {
-            mac: v.mac,
-            connectedAt: v.connectedAt.toISOString(),
-            disconnectedAt: v.disconnectedAt?.toISOString(),
-            lead: v.lead,
+            mac: visit.mac,
+            connectedAt: visit.connectedAt.toISOString(),
+            disconnectedAt: visit.disconnectedAt?.toISOString(),
+            lead: visit.lead,
           }),
         ),
       );
@@ -48,10 +56,10 @@ export class SimulationController {
 
   /** Cadastro manual do painel: mesma ingestão do portal, mas autenticada pelo login do dono. */
   @Post('connection')
-  connection(
+  registerConnection(
     @StoreId() storeId: string,
     @Body(new ZodValidationPipe(connectionInputSchema)) body: ConnectionInput,
-  ) {
+  ): Promise<IngestResult> {
     return this.connections.ingest(storeId, body);
   }
 }

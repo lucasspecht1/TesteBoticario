@@ -12,6 +12,7 @@ const envSchema = z.object({
   INGEST_API_KEY: z.string().min(24),
   MAC_HASH_SECRET: z.string().min(32),
   DEFAULT_STORE_ID: z.string().min(1).default('loja-demo'),
+  DEMO_AUTOFILL: z.stringbool().default(false),
   PORT: z.coerce.number().default(3001),
 });
 
@@ -23,4 +24,5 @@ if (!parsed.success) {
   );
   process.exit(1);
 }
+/** Variáveis de ambiente validadas; o processo encerra na partida se alguma estiver inválida. */
 export const env = parsed.data;

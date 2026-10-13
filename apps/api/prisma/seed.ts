@@ -1,74 +1,88 @@
-import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { BCRYPT_COST } from '../src/auth/bcrypt-cost';
 import { DAY_MS } from '../src/common/time';
-import { hashMac } from '../src/connections/mac';
 import { env } from '../src/env';
-import { generateVisits, type GeneratedVisit } from '../src/simulation/generator';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { DEMO_AVG_VISITS_PER_DAY } from '../src/simulation/demo-history';
+import { DemoHistoryService } from '../src/simulation/demo-history.service';
+import { generateVisits } from '../src/simulation/generator';
 
-const prisma = new PrismaClient();
-const DAYS = 180;
-const CHUNK = 5000;
+const prisma = new PrismaService();
+const demoHistory = new DemoHistoryService(prisma);
+/** Dias de histórico gerados para a loja demo. */
+const HISTORY_DAYS = 180;
 
-async function main() {
-  const storeId = env.DEFAULT_STORE_ID;
-  const email = (process.env.SEED_OWNER_EMAIL ?? 'dono@loja.demo').toLowerCase();
+/** Garante a loja demo. */
+async function upsertDemoStore(storeId: string): Promise<void> {
+  await prisma.store.upsert({
+    where: { id: storeId },
+    create: { id: storeId, name: 'Loja Demo — Shopping Centro' },
+    update: {},
+  });
+}
+
+/** Garante o dono da loja com o e-mail e a senha do ambiente (ou os padrões da demo). */
+async function upsertOwner(
+  storeId: string,
+): Promise<{ email: string; password: string }> {
+  const email = (
+    process.env.SEED_OWNER_EMAIL ?? 'dono@loja.demo'
+  ).toLowerCase();
   const password = process.env.SEED_OWNER_PASSWORD ?? 'demo1234';
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
+  await prisma.user.upsert({
+    where: { email },
+    create: { email, passwordHash, storeId },
+    update: { passwordHash },
+  });
+  return { email, password };
+}
 
-  await prisma.store.upsert({ where: { id: storeId }, create: { id: storeId, name: 'Loja Demo — Shopping Centro' }, update: {} });
-  const passwordHash = await bcrypt.hash(password, 10);
-  await prisma.user.upsert({ where: { email }, create: { email, passwordHash, storeId }, update: { passwordHash } });
-
+/** Apaga leads, visitas e aparelhos da loja para recriar o histórico do zero. */
+async function clearStoreHistory(storeId: string): Promise<void> {
   await prisma.$transaction([
     prisma.lead.deleteMany({ where: { device: { storeId } } }),
     prisma.visit.deleteMany({ where: { storeId } }),
     prisma.device.deleteMany({ where: { storeId } }),
   ]);
+}
+
+/** Com `SEED_IF_EMPTY=1` (serviço `seed` do docker-compose), preserva o histórico que já existe em vez de recriá-lo. */
+async function shouldKeepExistingHistory(storeId: string): Promise<boolean> {
+  if (process.env.SEED_IF_EMPTY !== '1') return false;
+  return (await prisma.visit.count({ where: { storeId } })) > 0;
+}
+
+/** Recria a loja demo com o dono e `HISTORY_DAYS` dias de visitas sintéticas (apaga o histórico atual da loja). */
+async function main(): Promise<void> {
+  const storeId = env.DEFAULT_STORE_ID;
+  if (await shouldKeepExistingHistory(storeId)) {
+    console.log('Seed pulado: a loja demo já tem visitas.');
+    return;
+  }
+  await upsertDemoStore(storeId);
+  const { email, password } = await upsertOwner(storeId);
+  await clearStoreHistory(storeId);
 
   const now = new Date();
-  const visits = generateVisits({ from: new Date(now.getTime() - DAYS * DAY_MS), to: now, avgPerDay: 70 });
-
-  const devices = new Map<string, { firstSeenAt: Date; lastSeenAt: Date; lead?: GeneratedVisit['lead'] }>();
-  for (const v of visits) {
-    const key = hashMac(v.mac, env.MAC_HASH_SECRET);
-    const seen = v.disconnectedAt ?? v.connectedAt;
-    const d = devices.get(key);
-    if (!d) devices.set(key, { firstSeenAt: v.connectedAt, lastSeenAt: seen, lead: v.lead });
-    else {
-      if (v.connectedAt < d.firstSeenAt) d.firstSeenAt = v.connectedAt;
-      if (seen > d.lastSeenAt) d.lastSeenAt = seen;
-      d.lead ??= v.lead;
-    }
-  }
-
-  await prisma.device.createMany({
-    data: [...devices].map(([macHash, d]) => ({ storeId, macHash, firstSeenAt: d.firstSeenAt, lastSeenAt: d.lastSeenAt })),
+  const visits = generateVisits({
+    from: new Date(now.getTime() - HISTORY_DAYS * DAY_MS),
+    to: now,
+    avgPerDay: DEMO_AVG_VISITS_PER_DAY,
   });
-  const ids = new Map(
-    (await prisma.device.findMany({ where: { storeId }, select: { id: true, macHash: true } })).map((d) => [d.macHash, d.id]),
+  const createdDevices = await demoHistory.insertNewCustomerVisits(
+    storeId,
+    visits,
   );
 
-  await prisma.lead.createMany({
-    data: [...devices]
-      .filter(([, d]) => d.lead)
-      .map(([macHash, d]) => ({ deviceId: ids.get(macHash)!, ...d.lead!, consentAt: d.firstSeenAt })),
-  });
-
-  const visitRows = visits.map((v) => ({
-    storeId,
-    deviceId: ids.get(hashMac(v.mac, env.MAC_HASH_SECRET))!,
-    startedAt: v.connectedAt,
-    endedAt: v.disconnectedAt ?? null,
-  }));
-  for (let i = 0; i < visitRows.length; i += CHUNK) {
-    await prisma.visit.createMany({ data: visitRows.slice(i, i + CHUNK) });
-  }
-
-  console.log(`Seed ok: ${devices.size} aparelhos, ${visits.length} visitas. Login: ${email} / ${password}`);
+  console.log(
+    `Seed ok: ${createdDevices} aparelhos, ${visits.length} visitas. Login: ${email} / ${password}`,
+  );
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
+  .catch((error) => {
+    console.error(error);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
