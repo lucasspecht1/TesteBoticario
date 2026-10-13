@@ -1,11 +1,116 @@
 @import 'tailwindcss';
 
+/*
+ * Tokens da identidade O Boticário.
+ * Verde principal: #4C765F, o dos botões e selos do site atual (escolha do Lucas).
+ * Verdes de apoio do brand guidelines: Jade #007E78, Quartzo #6FA286, Esmeralda #009F67,
+ * Verde-primavera #93DA49; neutros Cinza malva #D0C4C5, Musk #B6A19B, Veludo verde #495141.
+ * Do site atual (boticario.com.br, 2026-10-12): texto #212121, fundo #F2F2F2, DM Sans no texto.
+ * Display: Domaine Sans no guia (licenciada); aqui Belleza, sem serifa de alto contraste.
+ * Cantos: cartões e campos 12px, botões e abas em pílula, selos 4px.
+ */
 @theme {
-  --color-brand: #0f766e;
+  --font-sans: var(--font-dm-sans), Helvetica, Arial, sans-serif;
+  --font-display: var(--font-belleza), var(--font-dm-sans), Helvetica, sans-serif;
+
+  --color-brand: #4c765f;
+  --color-brand-strong: #3a5c4a;
+  --color-brand-deep: #495141; /* Veludo verde */
+  --color-brand-soft: #e6eee9;
+  --color-quartzo: #6fa286;
+  --color-esmeralda: #009f67;
+  --color-primavera: #93da49;
+  --color-rose: #d0c4c5; /* Cinza malva */
+  --color-rose-soft: #ebe2e3; /* Cinza malva clareado */
+  --color-musk: #b6a19b;
+  --color-mauve: #6e5853;
+
+  --color-ink: #212121;
+  --color-ink-2: #4a4a4a;
+  --color-ink-3: #666666;
+  --color-paper: #f2f2f2;
+  --color-card: #ffffff;
+  --color-line: #e3e3e3;
+
+  --color-down: #a8463b;
+  --color-down-soft: #f7e9e7;
+
+  --radius-card: 12px;
+  --radius-chip: 4px;
+
+  --shadow-card: 0 1px 2px rgb(73 81 65 / 0.05), 0 8px 24px -12px rgb(73 81 65 / 0.16);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  background: var(--color-paper);
+  scroll-padding-top: 5rem;
+  touch-action: manipulation;
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #f8fafc;
-  color: #18181b;
+  font-family: var(--font-sans);
+  font-feature-settings: 'tnum' 0;
+}
+
+::selection {
+  background: var(--color-brand-soft);
+  color: var(--color-brand-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/*
+ * Recharts 3 deixa as camadas internas do gráfico focáveis (tabindex -1): um clique na grade ou
+ * nas barras punha o contorno azul do navegador em volta da camada. Só o gráfico em si (tabindex 0,
+ * navegável pelas setas) mostra foco, e apenas quando vem do teclado.
+ */
+.recharts-wrapper :focus {
+  outline: none;
+}
+.recharts-wrapper .recharts-surface:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+input,
+textarea {
+  caret-color: var(--color-brand);
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+* {
+  scrollbar-color: #c9c9c9 transparent;
+  scrollbar-width: thin;
+}
+
+/* Entrada única da página: os blocos sobem em sequência, já visíveis por padrão. */
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 0.7s var(--ease-out-expo) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+}
+
+/* Foto do login: assenta devagar de um leve zoom (só com movimento permitido). */
+@keyframes settle {
+  from {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }

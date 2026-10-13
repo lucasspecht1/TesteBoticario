@@ -1,15 +1,21 @@
 'use server';
 
-import { loginSchema } from '@wifi/shared';
+import { loginSchema, SESSION_TTL_SECONDS } from '@wifi/shared';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { api, ApiError } from '@/lib/api';
-import { SESSION_COOKIE } from '@/lib/session';
+import { describeActionError } from '@/lib/action-errors';
+import { api, HTTP_STATUS } from '@/lib/api';
+import { LOGIN_PATH, SESSION_COOKIE } from '@/lib/session';
 
+/** Estado do formulário de login: a mensagem de erro, quando houver. */
 export type LoginState = { error?: string };
 
-export async function login(_: LoginState, formData: FormData): Promise<LoginState> {
-  const parsed = loginSchema.safeParse({ email: formData.get('email'), password: formData.get('password') });
+/** Entra com e-mail e senha: guarda o token em cookie httpOnly e vai para o painel. */
+export async function login(_previousState: LoginState, formData: FormData): Promise<LoginState> {
+  const parsed = loginSchema.safeParse({
+    email: formData.get('email'),
+    password: formData.get('password'),
+  });
   if (!parsed.success) return { error: 'Informe um e-mail válido e a senha.' };
   try {
     const { accessToken } = await api.login(parsed.data.email, parsed.data.password);
@@ -18,17 +24,24 @@ export async function login(_: LoginState, formData: FormData): Promise<LoginSta
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 8 * 3600,
+      maxAge: SESSION_TTL_SECONDS,
     });
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 401) return { error: 'E-mail ou senha incorretos.' };
-    if (e instanceof ApiError && e.status === 429) return { error: 'Muitas tentativas. Aguarde um minuto e tente de novo.' };
-    return { error: e instanceof ApiError ? e.message : 'Não foi possível entrar agora. Tente de novo.' };
+  } catch (error) {
+    return {
+      error: describeActionError(error, {
+        messageByStatus: {
+          [HTTP_STATUS.unauthorized]: 'E-mail ou senha incorretos.',
+          [HTTP_STATUS.tooManyRequests]: 'Muitas tentativas. Aguarde um minuto e tente de novo.',
+        },
+        fallback: 'Não foi possível entrar agora. Tente de novo.',
+      }),
+    };
   }
   redirect('/');
 }
 
-export async function logout() {
+/** Sai: apaga o cookie de sessão e volta para o login. */
+export async function logout(): Promise<void> {
   (await cookies()).delete(SESSION_COOKIE);
-  redirect('/login');
+  redirect(LOGIN_PATH);
 }

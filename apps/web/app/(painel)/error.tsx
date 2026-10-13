@@ -1,20 +1,36 @@
 'use client';
 
+import { ArrowClockwise, CloudSlash } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 import { startTransition } from 'react';
+import { MessagePanel, PANEL_ACTION } from '@/components/ui/message-panel';
 
-export default function PainelError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+/** Tela de erro do painel: o servidor falhou, com botão para tentar de novo. */
+export default function PanelError({
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}): React.JSX.Element {
   const router = useRouter();
+  const retry = () =>
+    startTransition(() => {
+      router.refresh();
+      reset();
+    });
   return (
-    <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-6">
-      <p className="font-semibold text-red-900">Não foi possível carregar o painel.</p>
-      <p className="mt-1 text-sm text-red-800">O servidor pode estar indisponível por um instante. Seus dados estão seguros.</p>
-      <button
-        onClick={() => startTransition(() => { router.refresh(); reset(); })}
-        className="mt-4 rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white"
-      >
-        Tentar de novo
-      </button>
-    </div>
+    <MessagePanel
+      icon={CloudSlash}
+      tone="down"
+      role="alert"
+      title="Não foi possível carregar o painel"
+      description="O servidor pode estar indisponível por um instante. Seus dados estão seguros."
+      action={
+        <button onClick={retry} className={PANEL_ACTION}>
+          <ArrowClockwise size={16} weight="bold" aria-hidden />
+          Tentar de novo
+        </button>
+      }
+    />
   );
 }
