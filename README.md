@@ -19,14 +19,14 @@ Painel para o dono de uma loja O Boticário entender o fluxo de clientes a parti
 
 ### Acesso
 
-O deploy **ainda não foi feito**; o passo a passo está em [`docs/deploy.md`](docs/deploy.md). Rodando localmente ([Como rodar](#como-rodar)):
-
-| O quê | URL |
+| O quê | Endereço |
 |---|---|
-| Painel (web) | http://localhost:3000 |
-| API | http://localhost:3001 |
-| Swagger | http://localhost:3001/docs |
+| Painel | https://teste-boticario-woad.vercel.app |
+| API | https://testeboticario-production.up.railway.app |
+| Swagger da API | https://testeboticario-production.up.railway.app/docs |
 | Login de demonstração | `dono@loja.demo` / `demo1234` |
+
+O front está na Vercel e a API e o banco no Railway ([`docs/deploy.md`](docs/deploy.md)). Os dados são simulados e se atualizam sozinhos a cada 5 minutos. Para rodar na sua máquina, veja [Como rodar](#como-rodar).
 
 ### Roteiro
 
