@@ -1,5 +1,7 @@
 # Painel de Wi-Fi de Visitantes — Implementation Plan
 
+> Plano original, aprovado antes do código. O código final evoluiu depois (redesign e revisão de clean code); a fonte da verdade é o repositório.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Painel online para o dono de uma loja O Boticário entender o fluxo de clientes a partir das conexões no Wi-Fi de visitantes.
@@ -8,7 +10,7 @@
 
 **Tech Stack:** Node 22+, pnpm 10, TypeScript strict, NestJS 11, Prisma 6, PostgreSQL 16, Zod 4, Jest + Supertest, Next.js 15, React 19, Tailwind 4, Recharts 3. Deploy: Neon (banco), Railway (API), Vercel (web).
 
-**Spec:** `docs/superpowers/specs/2026-10-12-painel-wifi-design.md`
+**Spec:** `docs/planejamento/especificacao.md`
 
 ## Global Constraints
 
@@ -93,7 +95,7 @@ Expected: versão do pnpm (10.x) e `?column? = 1`.
 **Interfaces:**
 - Produces (de `@wifi/shared`): `connectionInputSchema`, `ConnectionInput`, `loginSchema`, `LoginInput`, `rangeSchema`, `Range`, `RANGE_DAYS`, `metricsQuerySchema`, `MetricsQuery`, `simulateInputSchema`, `SimulateInput`, `Kpi`, `Metrics`, `MetricsCore`, `IngestResult`.
 
-O repositório já existe (`git init` feito, com `docs/superpowers/`).
+O repositório já existe (`git init` feito, com a especificação e este plano).
 
 - [ ] **Step 1: Arquivos da raiz**
 
@@ -2896,7 +2898,7 @@ git add -A && git commit -m "feat(web): página para gerar movimento e cadastrar
 
 1. **Links** — painel, API, Swagger, credenciais de demo (`dono@loja.demo / demo1234`).
 2. **O problema e a leitura dele** — Wi-Fi como sensor de fluxo; tabela pergunta → métrica → decisão (copiar da spec §2).
-3. **O que o painel mostra** — KPIs e definições exatas (visita = reconexão em 30 min; recorrente = voltou em outro dia; permanência = mediana das visitas encerradas; comparação "até o mesmo horário"); 1 print do painel (`docs/painel.png`).
+3. **O que o painel mostra** — KPIs e definições exatas (visita = reconexão em 30 min; recorrente = voltou em outro dia; permanência = mediana das visitas encerradas; comparação "até o mesmo horário"); 1 print do painel (`docs/imagens/painel.png`).
 4. **Arquitetura** — diagrama em Mermaid:
    ```mermaid
    flowchart LR
@@ -2923,7 +2925,7 @@ git add -A && git commit -m "feat(web): página para gerar movimento e cadastrar
 6. Como a qualidade foi garantida (testes escritos antes, revisão de cada tarefa, CI).
 7. Link para `docs/superpowers/` (spec e plano) e `docs/ai-log.md`.
 
-- [ ] **Step 3: Print** — tirar print do painel em produção (30 dias) e salvar em `docs/painel.png`.
+- [ ] **Step 3: Print** — tirar print do painel em produção (30 dias) e salvar em `docs/imagens/painel.png`.
 
 - [ ] **Step 4: Revisão final**
 

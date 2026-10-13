@@ -1,6 +1,8 @@
 # Painel de Wi-Fi de Visitantes — Spec
 
-Data: 2026-10-12 · Prazo: 2 dias · Vaga: desenvolvedor full-stack (Grupo Boticário)
+> Especificação original, aprovada antes do código. Algumas escolhas mudaram depois (por exemplo, o banco foi para o Railway e o relato de IA está em `docs/uso-de-ia.md`); a fonte da verdade é o repositório.
+
+Prazo: 2 dias · Vaga: desenvolvedor full-stack (Grupo Boticário)
 
 ## 1. Problema
 

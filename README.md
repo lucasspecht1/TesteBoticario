@@ -2,11 +2,24 @@
 
 Painel para o dono de uma loja O Boticário entender o fluxo de clientes a partir dos acessos ao Wi-Fi de visitantes. Desafio técnico para a vaga de desenvolvedor full-stack (Grupo Boticário), feito em 2 dias.
 
-![Painel com 30 dias de dados](docs/painel.png)
+![Painel com 30 dias de dados](docs/imagens/painel.png)
 
-## Links
+## Índice
 
-O deploy (Neon, Railway, Vercel) **ainda não foi feito**: o repositório não tem remoto e as contas não foram criadas. A seção [Como publicar](#como-publicar) resume os passos. Enquanto isso, rodando localmente ([Como rodar](#como-rodar-localmente)):
+- [Para avaliar em 5 minutos](#para-avaliar-em-5-minutos)
+- [O problema](#o-problema)
+- [O que o painel faz](#o-que-o-painel-faz)
+- [Arquitetura](#arquitetura)
+- [Como rodar](#como-rodar)
+- [Testes](#testes)
+- [Uso de IA](#uso-de-ia)
+- [Documentação](#documentação)
+
+## Para avaliar em 5 minutos
+
+### Acesso
+
+O deploy **ainda não foi feito**; o passo a passo está em [`docs/deploy.md`](docs/deploy.md). Rodando localmente ([Como rodar](#como-rodar)):
 
 | O quê | URL |
 |---|---|
@@ -15,191 +28,99 @@ O deploy (Neon, Railway, Vercel) **ainda não foi feito**: o repositório não t
 | Swagger | http://localhost:3001/docs |
 | Login de demonstração | `dono@loja.demo` / `demo1234` |
 
-## O problema e a leitura dele
+### Roteiro
 
-O dono quer visibilidade sobre quem acessa o Wi-Fi de visitantes para decidir melhor. Leitura adotada: **o Wi-Fi é um sensor de fluxo da loja**; cada aparelho que conecta é um cliente presente. O painel responde perguntas de negócio, não lista conexões:
+1. **Painel:** entre com o login de demonstração. A manchete diz como foram os últimos 30 dias e a semana típica mostra quando a loja enche: o dia mais cheio em verde, o mais fraco em rosado e hoje contornado. Troque o período para 7 ou 90 dias.
+2. **Um dia da semana:** toque no sábado. Aparecem o movimento hora a hora contra a média dos outros dias, a faixa em que vale reforçar a equipe e a escala sugerida, com quantas pessoas por horário.
+3. **Simular dados:** escolha "Loja lotada" e clique em Gerar. São 120 visitas nas últimas 2 h, gravadas pela mesma ingestão que o portal do Wi-Fi usaria.
+4. **Visitas:** veja quem está na loja agora, o aviso de loja cheia e cada visita com entrada, saída e duração. Abra um cliente para ver a ficha: segmento, frequência e histórico, identificado só por apelido (LGPD).
+5. **Clientes:** a retenção por turma mostra quantos clientes novos voltaram em 7, 30 e 60 dias, e a lista de reativação exporta em CSV quem sumiu e aceitou contato.
 
-| Pergunta do dono | Métrica no painel | Decisão que habilita |
-|---|---|---|
-| Quando a loja enche? | Mapa de calor dia da semana × hora (média de visitas) | Escala de equipe, horário de ações |
-| O movimento cresce? | Visitantes únicos e visitas, com variação vs. período anterior | Medir efeito de campanhas e datas |
-| O cliente volta? | % de visitantes recorrentes; série diária novos × recorrentes | Fidelização, cupom de retorno |
-| Quanto tempo fica? | Permanência mediana; distribuição em faixas | Proxy de interesse/atendimento |
-| Quem posso contatar? | % que aceitou comunicações (opt-in LGPD) | Base de CRM |
+## O problema
 
-O painel também mostra **insights em texto** gerados por regras (pico, dia mais fraco, tendência, recorrência baixa, opt-in baixo), cada um com a ação sugerida.
+O dono quer visibilidade sobre o Wi-Fi de visitantes para decidir melhor. A leitura que adotei: **o Wi-Fi é um sensor de fluxo da loja**, porque cada aparelho que conecta é um cliente presente. Por isso o painel responde perguntas de negócio em vez de listar conexões:
 
-## O que o painel mostra
+| Pergunta do dono | Onde o painel responde |
+|---|---|
+| Como foi o período e quando a loja enche? | Manchete do período e semana típica, com o pico de cada dia |
+| Hoje está bom? | Hoje contra o típico desse dia **até o mesmo horário** |
+| Quantas pessoas escalar? | Escala sugerida por faixa de horário e a projeção de amanhã |
+| Quem está na loja agora? | Visitas ao vivo, com aviso de loja cheia |
+| O cliente volta? | Recorrência, novos que voltaram e retenção por turma |
+| Quem vale chamar de volta? | Clientes sumidos que aceitaram contato, com exportação em CSV |
 
-Períodos de 7, 30 ou 90 dias (filtro na URL: `/?range=30d`). Definições exatas:
+Todas as perguntas, as decisões que cada métrica habilita e a definição exata de cada número: [`docs/metricas.md`](docs/metricas.md).
 
-- **Aparelho**: o MAC do celular, nunca guardado em claro (ver [Modelagem](#modelagem-de-dados)).
-- **Visita**: uma ou mais conexões do mesmo aparelho em que a reconexão acontece em até **30 min** depois do fim da anterior (o celular cai e volta do Wi-Fi). Uma visita aberta (sem fim) absorve reconexões por até **12 h**. Isso torna a ingestão idempotente: reenviar o mesmo evento não duplica a visita.
-- **Visitante único**: aparelho com ao menos uma visita no período.
-- **Recorrente**: visita feita em um dia (local) posterior ao primeiro dia em que o aparelho foi visto. Visitante recorrente = aparelho com ao menos uma visita recorrente.
-- **Permanência**: mediana das visitas **encerradas** (visitas abertas ficam fora).
-- **Opt-in** (`optInRate`): visitantes que aceitaram receber comunicações ÷ todos os visitantes únicos do período (quem não se cadastrou conta como não aceitou). O painel mostra só taxas, nunca dados pessoais.
-- **Comparação**: o período atual é comparado "até o mesmo ponto" com o anterior (30 dias até agora vs. os 30 dias anteriores até o mesmo horário). Contagens e minutos variam em %, taxas em pontos percentuais.
-- **Fuso**: todas as agregações por dia/hora usam `America/Sao_Paulo`.
+## O que o painel faz
 
-Há ainda a página `/simular`, que gera movimento (N visitas nas últimas 2 h) e registra uma conexão manual, passando pela mesma ingestão real, mas autenticado pelo login do dono (`/simulate`, `/simulate/connection`).
+- **Painel:** manchete do período (7, 30 ou 90 dias), semana típica, hoje contra o típico, amanhã, indicadores, insights em texto com a ação sugerida e últimas visitas.
+- **Análise do dia** (ao tocar num dia da semana): movimento por hora, faixa de reforço, horário vazio e escala sugerida.
+- **Visitas:** cada visita com entrada, saída e duração, filtros, busca, ficha do cliente e atualização a cada 30 s.
+- **Clientes:** retenção por turma em 7, 30 e 60 dias e lista de reativação com CSV.
+- **Simular dados:** gera movimento, testa a regra de visita e cadastra uma conexão à mão, tudo pela ingestão real.
+- **Privacidade (LGPD):** MAC guardado só como HMAC, cliente por apelido na tela e e-mail só no CSV de quem aceitou contato.
+
+**Design:** identidade O Boticário, a partir do site e do brand guidelines da marca (verde `#4C765F`, DM Sans no texto, Belleza nos títulos e foto do login de Bart Zimny, Unsplash License). A estrutura do painel foi escolhida entre composições comparadas lado a lado. Detalhes em [`docs/DESIGN.md`](docs/DESIGN.md) e [`docs/PRODUCT.md`](docs/PRODUCT.md).
 
 ## Arquitetura
 
-```mermaid
-flowchart LR
-  Portal[Portal Wi-Fi / Simulador] -- POST /connections + x-api-key --> API
-  Browser -- cookie httpOnly --> Web[Next.js na Vercel]
-  Web -- Bearer JWT --> API[NestJS no Railway]
-  API --> DB[(Postgres no Neon)]
-```
+Monorepo pnpm em TypeScript:
 
-Monorepo pnpm:
+- **`packages/shared`:** regras de negócio comuns e schemas Zod do contrato, usados pelos dois lados.
+- **`apps/api`:** NestJS + Prisma + Postgres. Toda regra de negócio e todo acesso a dados.
+- **`apps/web`:** Next.js (App Router) só como front; não fala com o banco.
 
-| Pacote | Papel |
-|---|---|
-| `packages/shared` (`@wifi/shared`) | Schemas Zod e tipos do contrato (conexão, login, filtros, resposta de métricas). Usado pela API e pelo front: a validação é a mesma nos dois lados. |
-| `apps/api` (`@wifi/api`) | NestJS + Prisma + Postgres. Módulos `connections` (ingestão), `metrics`, `auth`, `simulation`, `health`. As métricas são funções puras em TypeScript sobre as visitas do período, testáveis sem banco. |
-| `apps/web` (`@wifi/web`) | Next.js (App Router) **apenas como front**. Server Components buscam os dados no servidor; server actions fazem login e escrita. |
+Diagrama, endpoints, modelagem de dados e tratamento de erros: [`docs/arquitetura.md`](docs/arquitetura.md).
 
-Endpoints da API:
+## Como rodar
 
-| Método | Rota | Proteção | Função |
-|---|---|---|---|
-| POST | `/connections` | `x-api-key` | Cadastro de conexão (simula o portal do Wi-Fi) |
-| POST | `/auth/login` | limite de 10/min por e-mail | Login do dono, JWT de 8 h |
-| GET | `/metrics?range=7d\|30d\|90d` | JWT | Métricas do painel |
-| POST | `/simulate` | JWT | Gera N visitas nas últimas 2 h |
-| POST | `/simulate/connection` | JWT | Cadastro manual de uma conexão (painel `/simular`) |
-| GET | `/health` | nenhuma | Saúde da API e do banco |
-| GET | `/docs` | nenhuma | Swagger |
-
-**Por que o Next não fala com o banco.** Toda leitura e escrita passa pela API Nest: um único lugar com regras de negócio, validação e autorização, e o front pode ser trocado sem tocar nos dados. Os segredos ficam só no servidor: o JWT vai em cookie `httpOnly` (`painel_sessao`) e a `INGEST_API_KEY` só existe na API e no portal Wi-Fi (simulado); o Next não a conhece. A escrita pelo painel usa o JWT do dono (`/simulate/connection`). Nada disso chega ao JavaScript do navegador.
-
-## Modelagem de dados
-
-Cinco tabelas (`apps/api/prisma/schema.prisma`):
-
-| Tabela | Conteúdo |
-|---|---|
-| `Store` | Loja e seu fuso (`America/Sao_Paulo`). |
-| `Device` | Aparelho: `macHash` único por loja, primeira e última vez visto. |
-| `Visit` | Uma ida à loja: início, fim opcional. |
-| `Lead` | Cadastro opcional no portal (1 por aparelho): nome, e-mail, `marketingOptIn`, `consentAt`. |
-| `User` | O dono, vinculado à loja. |
-
-Decisões:
-
-- **HMAC do MAC (LGPD).** O MAC é um identificador pessoal. Guardamos `HMAC-SHA256(MAC_HASH_SECRET, mac normalizado)`. Um hash simples seria reversível por força bruta (o espaço de MACs é pequeno); com o segredo no servidor, o vazamento do banco não revela os aparelhos. Isso ainda permite reconhecer o mesmo aparelho entre visitas.
-- **Índice `(storeId, startedAt)` em `Visit`.** Toda consulta do painel é "visitas da loja no período"; o índice a cobre. O índice `(deviceId, startedAt)` atende a busca da visita anterior do aparelho na ingestão.
-- **`Lead.consentAt`.** O consentimento é uma prova: registramos quando foi dado. O horário é preservado em reenvios do mesmo evento e só muda quando o `marketingOptIn` muda.
-- **`@@unique([storeId, macHash])`** em `Device` garante um registro por aparelho mesmo com requisições concorrentes (a criação usa `upsert`).
-
-## Erros e falhas
-
-**API**
-- Validação Zod com mensagens por campo (400).
-- Filtro global com formato único: `{statusCode, message, details?, path, timestamp}`.
-- 401 para chave de ingestão ou token inválidos; 404/409 para erros conhecidos do Prisma; 500 genérico com log (sem vazar detalhes).
-- Variáveis de ambiente validadas na inicialização (falha rápida com mensagem clara).
-- `/health` checa também o banco.
-- Login: limite de 10 tentativas por minuto por e-mail (429) e comparação com hash fictício para não revelar se o e-mail existe.
-- Chave de ingestão comparada com `timingSafeEqual`.
-
-**Front**
-- `loading.tsx` (esqueleto) e `error.tsx` (mensagem + tentar de novo).
-- Estado vazio com caminho para gerar dados.
-- Sessão expirada (401 da API) volta ao login com aviso.
-- Timeout de 10 s nas chamadas à API.
-- Erros de formulário por campo, reaproveitando os schemas Zod do pacote compartilhado.
-
-## Como rodar localmente
-
-Requisitos: Node >= 22.12, pnpm 12 (`packageManager` em `package.json`) e Postgres 16.
+Requisitos: Node >= 22.12, pnpm 12 e Docker.
 
 ```bash
-# 1. Postgres 16 via Docker (usuário postgres, senha postgres) e o banco dos testes e2e
-docker compose up -d
-docker compose exec db createdb -U postgres wifi_test
-
-# 2. Variáveis de ambiente
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
-
-# 3. Dependências, contrato compartilhado, migrations e dados de demonstração
 pnpm install
-pnpm --filter @wifi/shared build
-pnpm --filter @wifi/api exec prisma migrate dev
-pnpm --filter @wifi/api seed
-
-# 4. Sobe API (3001) e web (3000)
-pnpm dev
+pnpm dev   # Postgres + migrations + dados de demonstração, API (3001) e web (3000)
 ```
 
-Sem Docker (Postgres do brew, por exemplo): `createdb wifi && createdb wifi_test` e ajuste o usuário/senha em `DATABASE_URL` de `apps/api/.env` e `apps/api/.env.test` (os exemplos usam `postgres:postgres`, como o `docker-compose.yml`).
-
-O seed cria a loja `loja-demo`, o usuário `dono@loja.demo` / `demo1234` e 180 dias de movimento determinístico (horário comercial, fim de semana, sazonalidade, ~30% de retorno). Rodar de novo apaga e recria os dados da `loja-demo`.
+Sem Docker, recomeçar do zero e o preenchimento automático da demo: [`docs/desenvolvimento.md`](docs/desenvolvimento.md).
 
 ## Testes
 
 ```bash
-pnpm lint && pnpm typecheck
-pnpm test        # 31 testes unitários (jest)
-pnpm test:e2e    # 18 testes e2e da API contra um Postgres real
+pnpm --filter @wifi/shared build   # contrato compartilhado (o pnpm dev já faz isso)
+pnpm format:check && pnpm lint && pnpm typecheck
+pnpm test        # 68 testes unitários da API e 3 checagens do front
+pnpm test:e2e    # 34 testes e2e da API contra um Postgres real (o banco do docker compose precisa estar de pé)
 pnpm build
 ```
 
-- **Unitários** (sem banco): regra de visita (30 min / 12 h), normalização e HMAC do MAC, métricas e insights, fuso horário, gerador de movimento.
-- **E2E** (`apps/api/test`): `/health`, ingestão (401 sem chave, 400 por campo, evento repetido não duplica), login, `/metrics` com e sem token, período inválido, `/simulate` e `/simulate/connection` (401 sem token, 201 com token).
-- **Banco do e2e separado.** Os testes e2e apagam dados, então usam um banco próprio, `wifi_test`, configurado em `apps/api/.env.test`. Crie-o com `createdb wifi_test` (ou o comando do Docker acima); o arquivo usa `postgres:postgres`, como o `docker-compose.yml`, então ajuste o usuário em `DATABASE_URL` se o seu Postgres for diferente. Um guard recusa rodar se o host não for local ou se o nome do banco não terminar em `_test`; assim os dados do seed e bancos remotos ficam protegidos. `pretest:e2e` aplica as migrations nesse banco.
-- **CI** (`.github/workflows/ci.yml`, GitHub Actions a cada push e PR): Postgres 16 como serviço (`wifi_test`), instala, builda o contrato, roda lint, tipos, testes unitários, e2e e build.
+O CI no GitHub Actions roda tudo isso a cada push. O que cada suíte cobre está em [`docs/desenvolvimento.md`](docs/desenvolvimento.md#testes).
 
-## Decisões e trade-offs
+## Uso de IA
 
-Atalhos deliberados, cada um com o limite e o próximo passo. Os seis primeiros estão marcados com `trade-off:` no código (`grep -rn "trade-off:" apps packages`); os demais foram identificados nas revisões e registrados aqui.
+Conduzi o projeto e usei a IA (Claude Code) como ferramenta de execução:
 
-| Atalho | Limite | Próximo passo |
-|---|---|---|
-| Métricas agregadas em memória (`compute-metrics.ts`) | Ok até centenas de milhares de visitas por período | `GROUP BY` no Postgres ou tabela diária pré-calculada |
-| Uma chave de ingestão = uma loja (`api-key.guard.ts`) | Só atende `DEFAULT_STORE_ID` | Tabela de chaves por loja |
-| Início do dia local usa o deslocamento do fuso no instante `date` (`time.ts`) | Erra se houver horário de verão entre a meia-noite e `date` (o Brasil não tem desde 2019) | Cálculo de transição de fuso, se houver lojas em outros países |
-| Gerador de movimento com UTC-3 fixo (`generator.ts`) | Só vale para fuso de Brasília | Usar `localParts` com o fuso da loja |
-| `datetime-local` do formulário assume UTC-3 (`simular/actions.ts`) | Painel de uma loja só | Enviar o fuso da loja ao front |
-| Eventos simultâneos do mesmo aparelho (`connections.service.ts`) | Dois primeiros eventos concorrentes podem criar duas visitas | Lock por aparelho (ex.: advisory lock) se a controladora enviar em paralelo |
-| Evento atrasado fora de ordem | Pode criar uma visita sobreposta a outra | Reordenar/mesclar visitas ao receber eventos antigos |
-| Limite de login por e-mail | Não impede tentativas espalhadas por vários e-mails | Limite também por IP e bloqueio progressivo |
-| Mapa de calor conta o dia de hoje (parcial) como dia inteiro | Leve viés para baixo nas células do dia atual | Dividir pelo tempo decorrido do dia atual |
-| Visitas geradas em "Simular dados" | Todas são aparelhos novos e ignoram o horário da loja | Reaproveitar aparelhos existentes |
-| Seed grava direto no banco | Não passa pela regra de merge de reconexões | Passar pelo `ConnectionsService` (custo: seed mais lento) |
+- **O que foi meu:** a leitura do problema, a stack, o escopo, as decisões de produto e de design e a revisão de cada entrega.
+- **O processo que defini:** spec e plano aprovados antes do código; para cada tarefa, um agente implementa com os testes escritos antes e outro, independente, revisa contra a spec.
+- **O que a IA fez:** executou o plano. Escreveu o código e os testes, e rodou as verificações (testes, lint, tipos, build, cliques no build de produção).
+- **O que a revisão e as verificações pegaram** antes de chegar aqui: um guard de testes que apagava o banco de desenvolvimento, uma rota de simulação sem login, filtros que não navegavam em produção e um erro de fuso numa consulta SQL.
+- **O que eu decidi tirar** depois de ver pronto: o cadastro de campanhas, cuja medição enganava.
 
-## Como publicar
+Detalhes, decisões e erros da IA: [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
 
-Ainda não executado. Passos planejados:
+## Documentação
 
-1. **GitHub**: criar o repositório e dar `git push`; o CI roda sozinho.
-2. **Banco (Neon)**: projeto `painel-wifi`, região **US East (AWS us-east-1)**, a mesma da API no Railway. Banco e API na mesma região importam: cada visita gerada em `/simular` faz várias consultas, e a latência entre regiões estouraria o timeout de 10 s do painel (a API também ingere em lotes de 10 em paralelo). Usar a connection string **direta** (sem `-pooler`), com `?sslmode=require`.
-3. **API (Railway)**: região US East, junto do Neon. Deploy do repositório com
-   - Build: `pnpm install --frozen-lockfile && pnpm --filter @wifi/api... build`
-   - Start: `pnpm --filter @wifi/api exec prisma migrate deploy && pnpm --filter @wifi/api start:prod`
-   - Healthcheck: `/health`
-   - Variáveis: `DATABASE_URL` (Neon), `JWT_SECRET`, `INGEST_API_KEY`, `MAC_HASH_SECRET` (cada um com `openssl rand -hex 32`), `DEFAULT_STORE_ID=loja-demo`. O `PORT` é injetado pelo Railway. Gerar o domínio público.
-4. **Seed de produção** (da máquina local, com os mesmos segredos de produção):
-   ```bash
-   cd apps/api && DATABASE_URL='<neon>' MAC_HASH_SECRET='<prod>' JWT_SECRET='<prod>' INGEST_API_KEY='<prod>' pnpm seed
-   ```
-5. **Web (Vercel)**: Root Directory `apps/web`; Build Command `cd ../.. && pnpm --filter @wifi/web... build`; Install Command `cd ../.. && pnpm install --frozen-lockfile`; variáveis `API_URL=https://<api>` (sem barra no fim) e `ENABLE_EXPERIMENTAL_COREPACK=1` (para a Vercel usar o pnpm 12 do `packageManager`). O web não precisa da `INGEST_API_KEY`.
-6. Conferir `https://<api>/health` e rodar o roteiro no painel publicado; depois atualizar a seção Links.
-
-## Próximos passos
-
-- Múltiplas lojas na interface (o modelo de dados já separa tudo por `storeId`; falta a chave de ingestão por loja e a escolha de loja na UI).
-- Exportação de leads para CRM.
-- Agregações pré-calculadas (hoje em memória).
-- Modo escuro.
-- Integração real com a controladora Wi-Fi (hoje o simulador faz o papel do portal).
-
-## Documentação relacionada
-
-- [`AI_USAGE.md`](AI_USAGE.md): como a IA foi usada, com exemplos reais.
-- [`docs/ai-log.md`](docs/ai-log.md): diário factual, tarefa a tarefa.
-- [`docs/superpowers/`](docs/superpowers/): spec e plano de implementação.
+| Documento | Conteúdo |
+|---|---|
+| [`docs/metricas.md`](docs/metricas.md) | O problema, as perguntas do dono e a definição de cada métrica |
+| [`docs/arquitetura.md`](docs/arquitetura.md) | Diagrama, pacotes, endpoints, modelagem de dados e tratamento de erros |
+| [`docs/desenvolvimento.md`](docs/desenvolvimento.md) | Como rodar localmente e o que cada teste cobre |
+| [`docs/decisoes.md`](docs/decisoes.md) | Atalhos deliberados e seus limites, próximos passos e a recomendação para campanhas |
+| [`docs/deploy.md`](docs/deploy.md) | Como publicar banco, API e web |
+| [`docs/PRODUCT.md`](docs/PRODUCT.md) | O produto, para quem é, princípios e compromissos com a marca |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | O design system do painel: cores, tipografia e componentes |
+| [`docs/padroes-de-codigo.md`](docs/padroes-de-codigo.md) | Regras de código do projeto, verificadas por Prettier e ESLint no CI |
+| [`docs/uso-de-ia.md`](docs/uso-de-ia.md) | Como usei a IA, minhas decisões e onde ela errou |
+| [`docs/ai-log.md`](docs/ai-log.md) | Diário factual, tarefa a tarefa |
+| [`docs/planejamento/`](docs/planejamento/) | Especificação e plano de implementação, aprovados antes do código |
