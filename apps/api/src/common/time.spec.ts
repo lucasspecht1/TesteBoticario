@@ -1,17 +1,17 @@
-import { localParts, startOfLocalDay } from './time';
+import { getLocalParts, startOfLocalDay } from './time';
 
 const SP = 'America/Sao_Paulo';
 
 describe('time', () => {
   it('01:30Z é 22:30 de domingo do dia anterior em São Paulo', () => {
-    expect(localParts(new Date('2026-10-12T01:30:00Z'), SP)).toMatchObject({
+    expect(getLocalParts(new Date('2026-10-12T01:30:00Z'), SP)).toMatchObject({
       dateKey: '2026-10-11',
       hour: 22,
       weekday: 0,
     });
   });
   it('meia-noite local vira hora 0, não 24', () => {
-    expect(localParts(new Date('2026-10-12T03:00:00Z'), SP)).toMatchObject({
+    expect(getLocalParts(new Date('2026-10-12T03:00:00Z'), SP)).toMatchObject({
       dateKey: '2026-10-12',
       hour: 0,
       weekday: 1,

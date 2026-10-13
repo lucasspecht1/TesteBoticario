@@ -1,12 +1,17 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { connectionInputSchema, type ConnectionInput } from '@wifi/shared';
+import {
+  connectionInputSchema,
+  type ConnectionInput,
+  type IngestResult,
+} from '@wifi/shared';
 import { z } from 'zod';
 import { ApiKeyGuard } from '../common/api-key.guard';
 import { StoreId } from '../common/store-id.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { ConnectionsService } from './connections.service';
 
+/** Entrada de conexões vindas do portal Wi-Fi, autenticada por chave de ingestão. */
 @ApiTags('ingestão')
 @ApiSecurity('ingest')
 @Controller('connections')
@@ -24,7 +29,7 @@ export class ConnectionsController {
   ingest(
     @StoreId() storeId: string,
     @Body(new ZodValidationPipe(connectionInputSchema)) body: ConnectionInput,
-  ) {
+  ): Promise<IngestResult> {
     return this.connections.ingest(storeId, body);
   }
 }

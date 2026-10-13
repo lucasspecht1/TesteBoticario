@@ -1,28 +1,34 @@
-export const MERGE_GAP_MS = 30 * 60_000;
-export const MAX_OPEN_VISIT_MS = 12 * 60 * 60_000;
+import { MAX_OPEN_VISIT_HOURS, MERGE_GAP_MINUTES } from '@wifi/shared';
+import { HOUR_MS, MINUTE_MS } from '../common/time';
+import type { VisitSpan } from '../common/visit-span';
 
-export type VisitWindow = { startedAt: Date; endedAt: Date | null };
+/** Nova conexão até `MERGE_GAP_MINUTES` depois da saída continua na mesma visita. */
+const MERGE_GAP_MS = MERGE_GAP_MINUTES * MINUTE_MS;
+/** Visita sem saída registrada aceita novas conexões por até `MAX_OPEN_VISIT_HOURS`; depois abre outra. */
+const MAX_OPEN_VISIT_MS = MAX_OPEN_VISIT_HOURS * HOUR_MS;
 
 /** A nova conexão pertence à última visita do aparelho? */
 export function shouldMerge(
-  last: VisitWindow | null,
+  lastVisit: VisitSpan | null,
   connectedAt: Date,
 ): boolean {
-  if (!last) return false;
-  if (last.endedAt === null)
+  if (!lastVisit) return false;
+  if (lastVisit.endedAt === null)
     return (
-      connectedAt.getTime() - last.startedAt.getTime() <= MAX_OPEN_VISIT_MS
+      connectedAt.getTime() - lastVisit.startedAt.getTime() <= MAX_OPEN_VISIT_MS
     );
-  return connectedAt.getTime() - last.endedAt.getTime() <= MERGE_GAP_MS;
+  return connectedAt.getTime() - lastVisit.endedAt.getTime() <= MERGE_GAP_MS;
 }
 
 /** Fim da visita depois de somar a conexão. null = aparelho ainda conectado. */
-export function mergedEnd(
-  lastEnd: Date | null,
+export function computeMergedEnd(
+  lastEndedAt: Date | null,
   connectedAt: Date,
   disconnectedAt: Date | null,
 ): Date | null {
   if (disconnectedAt)
-    return lastEnd && lastEnd > disconnectedAt ? lastEnd : disconnectedAt;
-  return lastEnd && lastEnd >= connectedAt ? lastEnd : null;
+    return lastEndedAt && lastEndedAt > disconnectedAt
+      ? lastEndedAt
+      : disconnectedAt;
+  return lastEndedAt && lastEndedAt >= connectedAt ? lastEndedAt : null;
 }

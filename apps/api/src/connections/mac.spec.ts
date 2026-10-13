@@ -12,8 +12,8 @@ describe('mac', () => {
   });
 
   it('depende do segredo e não contém o MAC', () => {
-    const h = hashMac('aa:bb:cc:dd:ee:ff', 'segredo-1');
-    expect(h).not.toBe(hashMac('aa:bb:cc:dd:ee:ff', 'segredo-2'));
-    expect(h).toMatch(/^[0-9a-f]{64}$/);
+    const hash = hashMac('aa:bb:cc:dd:ee:ff', 'segredo-1');
+    expect(hash).not.toBe(hashMac('aa:bb:cc:dd:ee:ff', 'segredo-2'));
+    expect(hash).toMatch(/^[0-9a-f]{64}$/);
   });
 });

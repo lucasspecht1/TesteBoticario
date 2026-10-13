@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 
+/** MAC em minúsculas e com ':' como separador, para o mesmo aparelho gerar sempre o mesmo hash. */
 export function normalizeMac(mac: string): string {
   return mac.toLowerCase().replace(/-/g, ':');
 }

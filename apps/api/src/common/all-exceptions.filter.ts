@@ -8,6 +8,7 @@ import {
 import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 
+/** Erros conhecidos do Prisma traduzidos para status HTTP e mensagem ao usuário. */
 const PRISMA_STATUS: Record<string, { status: number; message: string }> = {
   P2002: { status: 409, message: 'Registro duplicado.' },
   P2025: { status: 404, message: 'Registro não encontrado.' },
@@ -18,10 +19,10 @@ const PRISMA_STATUS: Record<string, { status: number; message: string }> = {
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger('Erro');
 
-  catch(exception: unknown, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const res = ctx.getResponse<Response>();
-    const req = ctx.getRequest<Request>();
+  catch(exception: unknown, host: ArgumentsHost): void {
+    const httpContext = host.switchToHttp();
+    const response = httpContext.getResponse<Response>();
+    const request = httpContext.getRequest<Request>();
 
     let status = 500;
     let message = 'Erro interno. Tente novamente em instantes.';
@@ -32,11 +33,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const body = exception.getResponse();
       if (typeof body === 'string') message = body;
       else {
-        const b = body as { message?: string | string[]; details?: unknown };
-        message = Array.isArray(b.message)
-          ? b.message.join('; ')
-          : (b.message ?? message);
-        details = b.details;
+        const errorBody = body as {
+          message?: string | string[];
+          details?: unknown;
+        };
+        message = Array.isArray(errorBody.message)
+          ? errorBody.message.join('; ')
+          : (errorBody.message ?? message);
+        details = errorBody.details;
       }
     } else if (
       exception instanceof Prisma.PrismaClientKnownRequestError &&
@@ -49,11 +53,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error(
         exception instanceof Error ? exception.stack : exception,
       );
-    res.status(status).json({
+    response.status(status).json({
       statusCode: status,
       message,
       details,
-      path: req.url,
+      path: request.url,
       timestamp: new Date().toISOString(),
     });
   }

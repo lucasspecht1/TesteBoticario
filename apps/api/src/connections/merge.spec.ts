@@ -1,24 +1,33 @@
-import { mergedEnd, shouldMerge } from './merge';
+import { computeMergedEnd, shouldMerge } from './merge';
 
-const t = (hhmm: string) => new Date(`2026-10-10T${hhmm}:00-03:00`);
+const atTime = (hhmm: string) => new Date(`2026-10-10T${hhmm}:00-03:00`);
 
 describe('shouldMerge', () => {
   it('sem visita anterior cria nova', () => {
-    expect(shouldMerge(null, t('14:00'))).toBe(false);
+    expect(shouldMerge(null, atTime('14:00'))).toBe(false);
   });
   it('reconexão até 30 min após o fim soma à visita', () => {
     expect(
-      shouldMerge({ startedAt: t('14:00'), endedAt: t('14:20') }, t('14:50')),
+      shouldMerge(
+        { startedAt: atTime('14:00'), endedAt: atTime('14:20') },
+        atTime('14:50'),
+      ),
     ).toBe(true);
   });
   it('reconexão depois de 30 min é visita nova', () => {
     expect(
-      shouldMerge({ startedAt: t('14:00'), endedAt: t('14:20') }, t('14:51')),
+      shouldMerge(
+        { startedAt: atTime('14:00'), endedAt: atTime('14:20') },
+        atTime('14:51'),
+      ),
     ).toBe(false);
   });
   it('visita aberta absorve reconexão', () => {
     expect(
-      shouldMerge({ startedAt: t('14:00'), endedAt: null }, t('16:00')),
+      shouldMerge(
+        { startedAt: atTime('14:00'), endedAt: null },
+        atTime('16:00'),
+      ),
     ).toBe(true);
   });
   it('visita aberta há mais de 12 h não absorve', () => {
@@ -31,23 +40,34 @@ describe('shouldMerge', () => {
   });
   it('evento repetido (mesma entrada) soma à visita existente', () => {
     expect(
-      shouldMerge({ startedAt: t('14:00'), endedAt: t('14:20') }, t('14:00')),
+      shouldMerge(
+        { startedAt: atTime('14:00'), endedAt: atTime('14:20') },
+        atTime('14:00'),
+      ),
     ).toBe(true);
   });
 });
 
 describe('mergedEnd', () => {
   it('usa a saída mais tardia', () => {
-    expect(mergedEnd(t('14:20'), t('14:00'), t('14:10'))).toEqual(t('14:20'));
-    expect(mergedEnd(t('14:20'), t('14:30'), t('14:40'))).toEqual(t('14:40'));
+    expect(
+      computeMergedEnd(atTime('14:20'), atTime('14:00'), atTime('14:10')),
+    ).toEqual(atTime('14:20'));
+    expect(
+      computeMergedEnd(atTime('14:20'), atTime('14:30'), atTime('14:40')),
+    ).toEqual(atTime('14:40'));
   });
   it('reconexão sem saída reabre a visita', () => {
-    expect(mergedEnd(t('14:20'), t('14:30'), null)).toBeNull();
+    expect(computeMergedEnd(atTime('14:20'), atTime('14:30'), null)).toBeNull();
   });
   it('evento repetido sem saída não reabre visita já encerrada', () => {
-    expect(mergedEnd(t('14:20'), t('14:00'), null)).toEqual(t('14:20'));
+    expect(computeMergedEnd(atTime('14:20'), atTime('14:00'), null)).toEqual(
+      atTime('14:20'),
+    );
   });
   it('visita aberta recebe a saída', () => {
-    expect(mergedEnd(null, t('14:00'), t('14:15'))).toEqual(t('14:15'));
+    expect(computeMergedEnd(null, atTime('14:00'), atTime('14:15'))).toEqual(
+      atTime('14:15'),
+    );
   });
 });
