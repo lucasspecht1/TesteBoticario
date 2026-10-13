@@ -1,0 +1,7 @@
+# db/ guarda os arquivos do Postgres (dono uid 999, sem leitura para o build)
+db
+.git
+**/node_modules
+**/dist
+**/.next
+**/.env*
